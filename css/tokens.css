@@ -2,38 +2,40 @@
    Design tokens = named values for every colour, font, size and corner.
    Change a value here and the whole site follows. */
 
+
+/* Calm, minimal theme: soft paper colours with a sage green accent.
+   It follows the device: light by day, dark when the device is in dark mode. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
   /* Surfaces, back to front */
-  --bg: #1c1719;          /* page background */
-  --card: #241e22;        /* cards and modals */
-  --card-head: #352a31;   /* card header bars */
-  --line: #3a2f35;        /* borders */
-  --track: #54434c;       /* the "not done yet" part of bars and rings */
+  --bg: #f4f3ef;          /* page background */
+  --card: #fbfaf7;        /* cards and modals */
+  --card-head: #efede7;   /* card header bars */
+  --line: #e3e0d8;        /* borders */
+  --track: #e2dfd6;       /* the "not done yet" part of bars and rings */
 
   /* Text */
-  --ink: #f4ebef;         /* main text */
-  --muted: #a6959d;       /* secondary text */
+  --ink: #2a2d2b;         /* main text */
+  --muted: #6e726d;       /* secondary text */
 
   /* Actions and states */
-  --accent: #dd91a6;      /* pink: buttons, progress, highlights */
-  --accent-ink: #1c1719;  /* text on top of pink */
-  --star: #f2c14e;        /* filled stars */
-  --star-off: #7d6973;    /* empty stars */
-  --success: #7fcf9a;     /* Selected, Accepted, Merged */
-  --danger: #f07a7a;      /* under 14 days, delete */
-  --scrim: rgba(12, 9, 11, 0.66); /* dark layer behind a modal */
+  --accent: #5b8a74;      /* sage green: buttons, progress, highlights */
+  --accent-ink: #ffffff;  /* text on top of the accent */
+  --star: #b07f2c;        /* streaks, "in review" */
+  --star-off: #c9c4b8;
+  --success: #3f8a5c;     /* merged, goal met */
+  --danger: #c0564c;      /* delete */
+  --scrim: rgba(42, 45, 43, 0.35); /* layer behind a modal */
 
-  /* One colour per program */
-  --gsoc: #88aaf0;
-  --esoc: #5dcbb8;
-  --lfx: #aca1f2;
-  --sob: #e9aa55;
+  /* One colour per program (checked so they are easy to tell apart) */
+  --gsoc: #4a6fc0;
+  --esoc: #3d9470;
+  --lfx: #a05a9c;
+  --sob: #b87a2a;
 
-  /* Shadows */
-  --shadow-glow: 0 0 0 4px rgba(221, 145, 166, 0.22);
-  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 0 4px rgba(91, 138, 116, 0.22);
+  --shadow-modal: 0 24px 64px rgba(42, 45, 43, 0.18);
 
   /* Fonts */
   --font-display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
@@ -55,3 +57,55 @@
   --radius-lg: 16px;
   --radius-pill: 999px;
 }
+
+/* Dark colours. Used when the device is in dark mode (unless you picked light with
+   the sun/moon button), or when you picked dark with the button. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #161a1a;
+    --card: #1d2122;
+    --card-head: #252a2a;
+    --line: #2d3333;
+    --track: #384040;
+    --ink: #e7ebe8;
+    --muted: #97a09b;
+    --accent: #93bfa9;
+    --accent-ink: #12201a;
+    --star: #d6b06a;
+    --star-off: #4c5452;
+    --success: #86c59b;
+    --danger: #e08a80;
+    --scrim: rgba(8, 11, 10, 0.6);
+    --gsoc: #7392dc;
+    --esoc: #4aa077;
+    --lfx: #b873b1;
+    --sob: #bd8336;
+    --shadow-glow: 0 0 0 4px rgba(147, 191, 169, 0.22);
+    --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.5);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #161a1a;
+  --card: #1d2122;
+  --card-head: #252a2a;
+  --line: #2d3333;
+  --track: #384040;
+  --ink: #e7ebe8;
+  --muted: #97a09b;
+  --accent: #93bfa9;
+  --accent-ink: #12201a;
+  --star: #d6b06a;
+  --star-off: #4c5452;
+  --success: #86c59b;
+  --danger: #e08a80;
+  --scrim: rgba(8, 11, 10, 0.6);
+  --gsoc: #7392dc;
+  --esoc: #4aa077;
+  --lfx: #b873b1;
+  --sob: #bd8336;
+  --shadow-glow: 0 0 0 4px rgba(147, 191, 169, 0.22);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+:root[data-theme="light"] { color-scheme: light; }
