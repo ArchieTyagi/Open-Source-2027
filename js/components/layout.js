@@ -16,6 +16,7 @@
       { page: 'sob', label: 'Summer of Bitcoin', short: 'SoB', href: 'sob.html', program: 'sob' }
     ] },
     { group: 'You', items: [
+      { page: 'prs', label: 'Add PR', short: 'Add PR', href: 'prs.html', icon: 'plus' },
       { page: 'progress', label: 'Progress', short: 'Progress', href: 'progress.html', icon: 'chart' },
       { page: 'contributions', label: 'Contributions', short: 'PRs', href: 'contributions.html', icon: 'branch' }
     ] }
@@ -52,6 +53,7 @@
       '<a class="os-brand" href="index.html">Open Source <b>2027</b></a>' +
       '<span class="os-spacer"></span>' +
       '<span class="os-saved" id="save-status" role="status">All changes saved</span>' +
+      '<button type="button" class="os-menu os-theme" data-theme-toggle aria-label="Switch light or dark mode"></button>' +
       '</header>' +
       '<nav class="os-nav" id="os-nav" aria-label="Pages">' + groups + '</nav>' +
       '<div class="os-nav-scrim" data-nav-close hidden></div>';
@@ -60,6 +62,35 @@
   // Menu works like YouTube:
   //   big screen  = button switches between the full menu and the small icon menu
   //   phone       = menu is hidden, button slides it in over the page
+  // ---------- light / dark switch ----------
+  // Saved in this browser. Until you press it, the site follows the device setting.
+  const THEME_KEY = 'open-source-2027-theme';
+  function currentTheme() {
+    const set = document.documentElement.dataset.theme;
+    if (set) return set;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  function drawThemeButton() {
+    const btn = document.querySelector('[data-theme-toggle]');
+    if (!btn) return;
+    const dark = currentTheme() === 'dark';
+    btn.innerHTML = App.icon(dark ? 'sun' : 'moon');
+    btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+    btn.title = dark ? 'Light mode' : 'Dark mode';
+  }
+  function setupTheme() {
+    const btn = document.querySelector('[data-theme-toggle]');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      const next = currentTheme() === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* private mode */ }
+      drawThemeButton();
+    });
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawThemeButton);
+    drawThemeButton();
+  }
+
   function setupNav() {
     const app = document.querySelector('.os-app');
     const btn = document.querySelector('[data-nav-toggle]');
@@ -111,6 +142,7 @@
     if (program) document.body.style.setProperty('--prog', 'var(--' + program + ')');
 
     setupNav();
+    setupTheme();
 
     footer.addEventListener('click', function (e) {
       const btn = e.target.closest('[data-foot]');
