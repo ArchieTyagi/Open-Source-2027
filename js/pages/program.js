@@ -33,13 +33,6 @@
   function myPRs() {
     return App.getPRs().filter(function (p) { return p.program === id; });
   }
-  // Org names already used on this program, for the suggestions in the form.
-  function knownOrgs() {
-    const names = {};
-    myPRs().forEach(function (p) { names[p.org] = true; });
-    Object.keys(App.data.log || {}).forEach(function (d) { App.getLog(d, id).forEach(function (e) { if (e.org) names[e.org] = true; }); });
-    return Object.keys(names).sort(function (a, b) { return a.localeCompare(b); });
-  }
   function statusSelect(p) {
     return '<select class="os-select os-select--sm os-prstatus os-prstatus--' + p.status + '" data-pr-change="' + p.id + '" aria-label="Status of ' + esc(p.title || 'PR') + '">' +
       STATUS_LIST.map(function (o) { return '<option value="' + o.value + '"' + (o.value === p.status ? ' selected' : '') + '>' + o.label + '</option>'; }).join('') + '</select>';
@@ -64,54 +57,23 @@
           '<td>' + statusSelect(p) + '</td>' +
           '<td class="os-mono os-small">' + App.formatDate(p.opened) + '</td>' +
           '<td class="os-mono os-small">' + (p.updated && p.updated !== p.opened ? App.formatDate(p.updated) : '&ndash;') + '</td>' +
-          '<td class="os-prtable__act"><button type="button" class="os-iconbtn" data-pr-edit="' + p.id + '" aria-label="Edit PR">' + App.icon('edit') + '</button>' +
+          '<td class="os-prtable__act"><a class="os-iconbtn" href="prs.html?edit=' + p.id + '" aria-label="Edit PR and its notes">' + App.icon('edit') + '</a>' +
           '<button type="button" class="os-iconbtn os-iconbtn--danger" data-pr-del="' + p.id + '" aria-label="Delete PR">' + App.icon('trash') + '</button></td></tr>';
       }).join('');
       return '<div class="os-prorg">' +
         '<div class="os-prorg__head"><div class="os-log__org">' + App.icon('org') + '<h3 class="os-h3">' + esc(org) + '</h3>' +
         '<span class="os-card__meta">' + prs.length + ' PR' + (prs.length === 1 ? '' : 's') + '</span></div>' +
         '<div class="os-row" style="gap:8px">' + countsHTML(prs) +
-        '<button type="button" class="os-btn os-btn--ghost os-btn--sm" data-pr-add-org="' + esc(org) + '">' + App.icon('plus') + ' Add PR</button></div></div>' +
+        '<a class="os-btn os-btn--ghost os-btn--sm" href="prs.html?program=' + id + '&amp;org=' + encodeURIComponent(org) + '">' + App.icon('plus') + ' Add PR</a></div></div>' +
         '<div class="os-tablewrap"><table class="os-table os-prtable"><thead><tr><th>#</th><th>PR</th><th>Status</th><th>Opened</th><th>Updated</th><th><span class="os-sr">Actions</span></th></tr></thead>' +
         '<tbody>' + rows + '</tbody></table></div></div>';
-    }).join('') : '<p class="os-list-empty os-plan-empty">No PRs yet. Opened a PR? Press Add PR, write the org, the PR title and link. When it gets merged or closed, change its status right here.</p>';
+    }).join('') : '<p class="os-list-empty os-plan-empty">No PRs yet. Opened a PR? Press Add PR and write the org, title, link, and what, how and why you did it. When it gets merged or closed, change its status right here.</p>';
     return '<section class="os-card os-plan-block os-section" style="--prog:var(--' + id + ')" aria-label="My PRs">' +
       '<div class="os-card__head os-plan-block__head"><div class="os-row" style="gap:10px"><span class="os-plan-block__dot" aria-hidden="true"></span>' +
       '<h2 class="os-h2">My PRs</h2><span class="os-card__meta">' + list.length + ' total</span></div>' +
       '<div class="os-row" style="gap:8px">' + (list.length ? countsHTML(list) : '') +
-      '<button type="button" class="os-btn os-btn--primary os-btn--sm" data-pr-add-org="">' + App.icon('plus') + ' Add PR</button></div></div>' +
+      '<a class="os-btn os-btn--primary os-btn--sm" href="prs.html?program=' + id + '">' + App.icon('plus') + ' Add PR</a></div></div>' +
       '<div class="os-card__body os-plan-block__body">' + body + '</div></section>';
-  }
-
-  function openPRForm(pr, org) {
-    const e = pr || { org: org || '', title: '', link: '', status: 'review', opened: App.todayKey() };
-    const orgs = knownOrgs();
-    App.openModal({
-      title: pr ? 'Edit PR' : 'Add PR',
-      subtitle: info.title,
-      submitLabel: pr ? 'Save changes' : 'Add PR',
-      body:
-        App.field('Organization', App.textInput('org', e.org, 'e.g. sktime', ' list="org-list" autocomplete="off"') +
-          '<datalist id="org-list">' + orgs.map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>', { full: true }) +
-        App.field('PR title', App.textInput('title', e.title, 'e.g. Fix date parsing in forecaster'), { full: true }) +
-        App.field('PR link', App.textInput('link', e.link, 'github.com/org/repo/pull/456'), { full: true }) +
-        App.field('Status', App.selectInput('status', STATUS_LIST, e.status)) +
-        App.field('Opened on', '<input class="os-input" type="date" name="opened" value="' + esc(e.opened || App.todayKey()) + '">'),
-      onSubmit: function (v) {
-        const data = { org: (v.org || '').trim(), title: (v.title || '').trim(), link: (v.link || '').trim(), status: v.status, opened: v.opened || App.todayKey() };
-        if (!data.org) return 'Write the organization name.';
-        if (!data.link) return 'Add the PR link.';
-        const dupe = App.getPRs().find(function (p) { return p !== pr && App.prKey(p.link) === App.prKey(data.link); });
-        if (dupe) return 'This PR link is already in your list (' + dupe.org + '). Change its status there instead.';
-        if (pr) {
-          if (pr.status !== data.status) data.updated = App.todayKey();
-          Object.assign(pr, data);
-        } else {
-          App.getPRs().push(Object.assign({ id: App.uid(), program: id, updated: data.opened }, data));
-        }
-        App.commit();
-      }
-    });
   }
 
   document.addEventListener('change', function (ev) {
@@ -121,10 +83,6 @@
     if (pr && pr.status !== sel.value) { pr.status = sel.value; pr.updated = App.todayKey(); App.commit(); }
   });
   document.addEventListener('click', function (ev) {
-    const add = ev.target.closest('[data-pr-add-org]');
-    if (add) { openPRForm(null, add.dataset.prAddOrg); return; }
-    const ed = ev.target.closest('[data-pr-edit]');
-    if (ed) { const pr = App.getPRs().find(function (p) { return p.id === ed.dataset.prEdit; }); if (pr) openPRForm(pr); return; }
     const del = ev.target.closest('[data-pr-del]');
     if (del && confirm('Delete this PR from your list?')) {
       const list = App.getPRs();
