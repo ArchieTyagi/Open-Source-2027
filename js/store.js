@@ -11,6 +11,8 @@
      log:           { "2026-11-22": { gsoc: [{ id, org, tech, issue, issueLink, repo, prs: [{ link, status }], did, learned }] } }
      prs:           [{ id, program: "gsoc", org, title, link, status: "review" | "merged" | "closed", opened, updated }]
                     the "My PRs" list on each program page
+     ratings:       { "2026-11-25": 4 }   focus & productivity stars (1 to 5) per day
+     weekFocus:     { "2026-11-23": "text" }   weekly focus note, key = Monday of that week
      todos:         { "2026-11-23": [{ id, text, tag: "gsoc", done }] }   Today's tasks on the Planner
      focus:         { days: { "2026-11-22": { gsoc: 3600 } },   seconds of focus time per program
                       running: { program: "gsoc", since: 1795000000000 } or null }   the timer that is ticking now
@@ -21,7 +23,7 @@
   const STORAGE_KEY = 'open-source-2027';
 
   function emptyData() {
-    return { version: 1, days: {}, weekFocus: {}, programs: {}, contributions: [], log: {}, focus: { days: {}, running: null }, todos: {}, prs: [] };
+    return { version: 1, days: {}, weekFocus: {}, programs: {}, contributions: [], log: {}, focus: { days: {}, running: null }, todos: {}, prs: [], ratings: {} };
   }
 
   function load() {
@@ -99,6 +101,11 @@
     if (!App.data.todos) App.data.todos = {};
     if (!App.data.todos[dayKey]) App.data.todos[dayKey] = [];
     return App.data.todos[dayKey];
+  };
+  App.getRating = function (dayKey) { return (App.data.ratings || {})[dayKey] || 0; };
+  App.setRating = function (dayKey, n) {
+    if (!App.data.ratings) App.data.ratings = {};
+    if (n) App.data.ratings[dayKey] = n; else delete App.data.ratings[dayKey];
   };
   App.todosDone = function () {
     let n = 0;
