@@ -1,11 +1,12 @@
 /* planner.js
    The Planner page (index.html): your open source dashboard.
    1. Focus timer: aim for 2 hours of open source every day. Pick a program, press Start.
-   2. Today: what you logged today, tasks done, and your goal streak.
-   2b. Today's tasks: a to-do list, each task tagged with a program.
-   3. Overall: focus hours, goal days, tasks done, active days. (PR counts live on the Progress page.)
-   4. Last 14 days (hours per day vs the 2-hour line) and a 16-week consistency grid.
-   5. One card per program: hours, tasks done and work entries.
+   2. Today: tasks done today per program, focus time today, and your goal streak.
+   3. Three cards: Daily to-do (tasks tagged GSoC / ESoC / LFX / SoB), Overall progress
+      of the week split by program colour, and Focus & productivity stars.
+   4. Full week: 7 days with a progress donut and task list each. Past days are locked.
+   5. Last 14 days of focus time and a 16-week consistency grid.
+   Totals (focus hours, goal days, tasks done, active days, program cards) are on Progress.
    You add work entries on each program's own page (GSoC, ESoC, LFX, SoB). */
 
 (function (App) {
@@ -102,18 +103,21 @@
   // ---------- 2. today ----------
   function todayHTML() {
     const today = App.todayKey();
-    let entries = 0;
     const todos = App.getTodos(today);
     const tasksDone = todos.filter(function (t) { return t.done; }).length;
+    let entries = 0;
     const rows = App.PROGRAM_ORDER.map(function (id) {
-      const list = App.getLog(today, id);
-      entries += list.length;
-      const tasks = todos.filter(function (t) { return t.tag === id; }).length;
-      const orgs = list.map(function (e) { return esc(e.org); }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+      const mine = todos.filter(function (t) { return t.tag === id; });
+      const done = mine.filter(function (t) { return t.done; }).length;
+      const work = App.getLog(today, id);
+      entries += work.length;
+      const what = mine.length
+        ? mine.map(function (t) { return esc(t.text); }).join(', ')
+        : work.length ? work.map(function (e) { return esc(e.org); }).join(', ') : '<span class="os-muted">Nothing yet</span>';
       return '<a class="os-todayrow" href="' + App.PROGRAMS[id].page + '" style="--prog:var(--' + id + ')">' +
         '<span class="os-todayrow__name">' + esc(App.PROGRAMS[id].short) + '</span>' +
-        '<span class="os-todayrow__what">' + (list.length ? orgs : '<span class="os-muted">Nothing yet</span>') + '</span>' +
-        '<span class="os-todayrow__n os-mono">' + list.length + (tasks ? ' · ' + tasks + ' task' + (tasks > 1 ? 's' : '') : '') + '</span>' + App.icon('right') + '</a>';
+        '<span class="os-todayrow__what">' + what + '</span>' +
+        '<span class="os-todayrow__n os-mono">' + (mine.length ? done + '/' + mine.length : '0') + '</span>' + App.icon('right') + '</a>';
     }).join('');
     const streak = App.goalStreak();
     return '<section class="os-card os-today" aria-label="Today">' +
@@ -121,62 +125,186 @@
       '<h2 class="os-today__day">' + App.dayName(today) + '</h2><p class="os-plan-date__num os-mono">' + App.formatDate(today) + '</p></div>' +
       '<div class="os-streak" title="Days in a row with 2 hours done"><span class="os-streak__n os-mono">' + streak + '</span>' +
       '<span class="os-streak__l">day' + (streak === 1 ? '' : 's') + '<br>goal streak</span></div></div>' +
-      '<div class="os-today__nums"><div><span class="os-num-md os-mono">' + entries + '</span><span class="os-label">entries today</span></div>' +
-      '<div><span class="os-num-md os-mono">' + tasksDone + '<small> / ' + todos.length + '</small></span><span class="os-label">tasks done today</span></div></div>' +
+      '<div class="os-today__nums"><div><span class="os-num-md os-mono">' + tasksDone + '<small> / ' + todos.length + '</small></span><span class="os-label">tasks done today</span></div>' +
+      '<div><span class="os-num-md os-mono">' + hm(App.focusTotal(today)) + '</span><span class="os-label">focus time today</span></div></div>' +
       '<div class="os-todayrows">' + rows + '</div>' +
-      '<p class="os-hint">Tap a program to add today\'s work on its page.</p></section>';
+      '<p class="os-hint">Tasks done / planned per program. Tap a program to open its page.</p></section>';
   }
 
-  // ---------- Today's tasks: a to-do list, each task tagged GSoC / ESoC / LFX / SoB ----------
+  // ---------- the week shown in the dashboard ----------
+  let weekStart = App.weekStart(App.todayKey());
+  let selDay = App.todayKey();
   let tag = App.PROGRAM_ORDER[0];
-  let filter = 'all';
-  function tasksHTML() {
-    const today = App.todayKey();
-    const all = App.getTodos(today);
-    const done = all.filter(function (t) { return t.done; }).length;
-    const shown = all.filter(function (t) { return filter === 'all' || t.tag === filter; })
-      .slice().sort(function (a, b) { return a.done - b.done; }); // open tasks first
-    const tags = App.PROGRAM_ORDER.map(function (id) {
+  const SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const STAR = '<svg class="os-starsvg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4L2.8 9.5l6.4-.8z"/></svg>';
+  const RATE_WORDS = ['Not rated yet', 'Rough day', 'Below par', 'Okay', 'Good day', 'Fully locked in'];
+  function weekDays() { const d = []; for (let i = 0; i < 7; i++) d.push(App.addDays(weekStart, i)); return d; }
+  function isPast(day) { return day < App.todayKey(); }
+  // Done tasks per program on one day: { gsoc: 2, sob: 1 }, plus total planned.
+  function doneBy(day) {
+    const out = { total: 0, done: 0 };
+    App.PROGRAM_ORDER.forEach(function (id) { out[id] = 0; });
+    App.getTodos(day).forEach(function (t) {
+      out.total++;
+      if (t.done) { out.done++; if (out[t.tag] !== undefined) out[t.tag]++; }
+    });
+    return out;
+  }
+
+  // Donut split by program colour: each program's done tasks, grey for what's left.
+  function donutSVG(by, size, stroke) {
+    const r = (size - stroke) / 2, c = 2 * Math.PI * r, cx = size / 2;
+    let off = 0, segs = '';
+    if (by.total) {
+      App.PROGRAM_ORDER.forEach(function (id) {
+        if (!by[id]) return;
+        const len = by[id] / by.total * c;
+        segs += '<circle cx="' + cx + '" cy="' + cx + '" r="' + r + '" fill="none" stroke="var(--' + id + ')" stroke-width="' + stroke + '" ' +
+          'stroke-dasharray="' + Math.max(0, len - 2) + ' ' + (c - Math.max(0, len - 2)) + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 ' + cx + ' ' + cx + ')"><title>' + App.PROGRAMS[id].short + ': ' + by[id] + ' done</title></circle>';
+        off += len;
+      });
+    }
+    const pct = by.total ? Math.round(by.done / by.total * 100) + '%' : '–';
+    return '<svg class="os-donut" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" role="img" aria-label="' + by.done + ' of ' + by.total + ' tasks done">' +
+      '<circle cx="' + cx + '" cy="' + cx + '" r="' + r + '" fill="none" stroke="var(--track)" stroke-width="' + stroke + '"/>' + segs +
+      '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="var(--ink)" font-family="JetBrains Mono, monospace" font-weight="600" font-size="' + Math.round(size / 6.2) + '">' + pct + '</text></svg>';
+  }
+
+  function tagChipsHTML() {
+    return App.PROGRAM_ORDER.map(function (id) {
       return '<button type="button" class="os-pchip os-pchip--sm' + (id === tag ? ' is-on' : '') + '" style="--prog:var(--' + id + ')" data-tag="' + id + '" aria-pressed="' + (id === tag) + '">' + esc(App.PROGRAMS[id].short) + '</button>';
     }).join('');
-    const filters = ['all'].concat(App.PROGRAM_ORDER).map(function (id) {
-      const n = id === 'all' ? all.length : all.filter(function (t) { return t.tag === id; }).length;
-      const label = id === 'all' ? 'All' : App.PROGRAMS[id].short;
-      return '<button type="button" class="os-tfilter' + (filter === id ? ' is-on' : '') + '" data-filter="' + id + '"' + (id !== 'all' ? ' style="--prog:var(--' + id + ')"' : '') + '>' + esc(label) + ' <span class="os-mono">' + n + '</span></button>';
+  }
+  function taskItemHTML(t, locked) {
+    return '<li class="os-task' + (t.done ? ' is-done' : '') + '" style="--prog:var(--' + t.tag + ')">' +
+      '<label class="os-task__check"><input type="checkbox" data-todo="toggle" data-day="' + t.day + '" data-id="' + t.id + '"' + (t.done ? ' checked' : '') + (locked ? ' disabled' : '') + '>' +
+      '<span class="os-task__box" aria-hidden="true">' + App.icon('check') + '</span><span class="os-task__text">' + esc(t.text) + '</span></label>' +
+      '<span class="os-task__tag">' + esc(App.PROGRAMS[t.tag] ? App.PROGRAMS[t.tag].short : t.tag) + '</span>' +
+      (locked ? '<span></span>' : '<button type="button" class="os-iconbtn os-iconbtn--danger" data-todo="delete" data-day="' + t.day + '" data-id="' + t.id + '" aria-label="Delete task">' + App.icon('trash') + '</button>') + '</li>';
+  }
+  function withDay(day) { return App.getTodos(day).map(function (t) { return Object.assign({ day: day }, t); }); }
+
+  // ---------- 3a. daily to-do (the selected day) ----------
+  function dailyTodoHTML() {
+    const day = selDay, locked = isPast(day);
+    const by = doneBy(day);
+    const pct = by.total ? Math.round(by.done / by.total * 100) : 0;
+    const segs = App.PROGRAM_ORDER.filter(function (id) { return by[id]; }).map(function (id) {
+      return '<span style="width:' + (by[id] / by.total * 100) + '%;--prog:var(--' + id + ')" title="' + App.PROGRAMS[id].short + ': ' + by[id] + ' done"></span>';
     }).join('');
-    const list = shown.length ? shown.map(function (t) {
-      return '<li class="os-task' + (t.done ? ' is-done' : '') + '" style="--prog:var(--' + t.tag + ')">' +
-        '<label class="os-task__check"><input type="checkbox" data-todo="toggle" data-id="' + t.id + '"' + (t.done ? ' checked' : '') + '><span class="os-task__box" aria-hidden="true">' + App.icon('check') + '</span>' +
-        '<span class="os-task__text">' + esc(t.text) + '</span></label>' +
-        '<span class="os-task__tag">' + esc(App.PROGRAMS[t.tag] ? App.PROGRAMS[t.tag].short : t.tag) + '</span>' +
-        '<button type="button" class="os-iconbtn os-iconbtn--danger" data-todo="delete" data-id="' + t.id + '" aria-label="Delete task">' + App.icon('trash') + '</button></li>';
-    }).join('') : '<li class="os-list-empty os-task-empty">' + (all.length ? 'No tasks with this tag today.' : 'No tasks yet. Write what you want to get done today and pick a tag.') + '</li>';
-    const pct = all.length ? Math.round(done / all.length * 100) : 0;
-    return '<section class="os-card os-tasks os-section" aria-label="Today\'s tasks">' +
-      '<div class="os-tasks__head"><div><p class="os-label">To-do list</p><h2 class="os-h2">Today\'s tasks</h2></div>' +
-      '<div class="os-tasks__prog"><span class="os-mono">' + done + ' / ' + all.length + ' done</span><span class="os-pcard__bar"><span style="width:' + pct + '%;--prog:var(--success)"></span></span></div></div>' +
-      '<form class="os-taskform" data-todo-form>' +
-      '<input class="os-input" id="todo-text" name="text" placeholder="e.g. Reply to the mentor on issue #4521" maxlength="200" aria-label="New task" autocomplete="off">' +
-      '<div class="os-pchips" role="group" aria-label="Tag">' + tags + '</div>' +
-      '<button type="submit" class="os-btn os-btn--primary">' + App.icon('plus') + ' Add task</button></form>' +
-      (all.length ? '<div class="os-tfilters" role="group" aria-label="Show tasks with tag">' + filters + '</div>' : '') +
-      '<ul class="os-tasklist">' + list + '</ul></section>';
+    const items = withDay(day).sort(function (a, b) { return a.done - b.done; });
+    return '<section class="os-card os-dcard" aria-label="Daily to-do">' +
+      '<div class="os-dcard__cap">Daily to-do</div>' +
+      '<div class="os-dcard__title"><h2 class="os-h2">' + (day === App.todayKey() ? 'Today · ' : '') + App.dayName(day) + '</h2>' +
+      (locked ? '<span class="os-flag">Locked</span>' : '') + '</div>' +
+      '<p class="os-mono os-muted os-small">' + App.formatDate(day) + '</p>' +
+      '<div class="os-dcard__prog"><span><b>' + by.done + '</b> of ' + by.total + ' done</span><span class="os-mono">' + pct + '%</span></div>' +
+      '<div class="os-split-bar os-dcard__bar">' + segs + '</div>' +
+      '<ul class="os-tasklist">' + (items.length ? items.map(function (t) { return taskItemHTML(t, locked); }).join('')
+        : '<li class="os-list-empty os-task-empty">' + (locked ? 'No tasks were planned.' : 'No tasks yet. Add one below.') + '</li>') + '</ul>' +
+      (locked ? '<p class="os-hint">This day has passed, so it is locked.</p>'
+        : '<form class="os-taskform os-taskform--stack" data-todo-form data-day="' + day + '">' +
+          '<div class="os-row" style="gap:8px"><input class="os-input" id="todo-text" name="text" placeholder="Add a task" maxlength="200" aria-label="New task" autocomplete="off">' +
+          '<button type="submit" class="os-btn os-btn--primary os-btn--sq" aria-label="Add task">' + App.icon('plus') + '</button></div>' +
+          '<div class="os-pchips" role="group" aria-label="Tag">' + tagChipsHTML() + '</div></form>') +
+      '</section>';
   }
 
-  // ---------- 3. overall ----------
-  function overallHTML(sum) {
-    let total = 0, met = 0;
-    App.focusAllDays().forEach(function (d) { const t = App.focusTotal(d); total += t; if (t >= GOAL) met++; });
-    function tile(label, num, note, icon) {
-      return '<div class="os-stat os-stat--fancy"><span class="os-stat__icon">' + App.icon(icon) + '</span>' +
-        '<span class="os-label">' + label + '</span><span class="os-num-lg">' + num + '</span><span class="os-stat__note">' + note + '</span></div>';
+  // ---------- 3b. overall progress of the week, split by program colour ----------
+  function weekProgressHTML() {
+    const days = weekDays();
+    const per = days.map(doneBy);
+    const total = { total: 0, done: 0 };
+    App.PROGRAM_ORDER.forEach(function (id) { total[id] = 0; });
+    per.forEach(function (b) { total.total += b.total; total.done += b.done; App.PROGRAM_ORDER.forEach(function (id) { total[id] += b[id]; }); });
+    const top = Math.max(4, Math.max.apply(null, per.map(function (b) { return b.total; })));
+    const step = top <= 8 ? 2 : Math.ceil(top / 4);
+    const max = Math.ceil(top / step) * step;
+    const W = 260, H = 180, L = 22, B = 22, T = 6, plotH = H - B - T, plotW = W - L - 4, slot = plotW / 7, bw = Math.min(26, slot * 0.6);
+    const y = function (v) { return T + plotH - v / max * plotH; };
+    let g = '';
+    for (let v = 0; v <= max; v += step) g += '<line x1="' + L + '" x2="' + (W - 4) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line)"/>' +
+      '<text x="' + (L - 6) + '" y="' + y(v) + '" text-anchor="end" dominant-baseline="central" font-size="10" fill="var(--muted)" font-family="JetBrains Mono, monospace">' + v + '</text>';
+    per.forEach(function (b, i) {
+      const x = L + i * slot + (slot - bw) / 2;
+      const tip = App.dayName(days[i]) + ': ' + b.done + ' of ' + b.total + ' done';
+      if (b.total) g += '<rect x="' + x + '" y="' + y(b.total) + '" width="' + bw + '" height="' + (y(0) - y(b.total)) + '" rx="4" fill="var(--track)"><title>' + tip + '</title></rect>';
+      let base = 0;
+      App.PROGRAM_ORDER.forEach(function (id) {
+        if (!b[id]) return;
+        const h = y(base) - y(base + b[id]);
+        g += '<rect x="' + x + '" y="' + (y(base + b[id]) + 1) + '" width="' + bw + '" height="' + Math.max(0, h - 2) + '" rx="3" fill="var(--' + id + ')"><title>' + App.PROGRAMS[id].short + ' on ' + App.dayName(days[i]) + ': ' + b[id] + ' done</title></rect>';
+        base += b[id];
+      });
+      const sel = days[i] === selDay;
+      g += '<text x="' + (x + bw / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" fill="' + (sel ? 'var(--ink)' : 'var(--muted)') + '" font-weight="' + (sel ? 700 : 400) + '">' + SHORT[i] + '</text>';
+    });
+    const legend = App.PROGRAM_ORDER.map(function (id) {
+      return '<span class="os-legend__i" style="--prog:var(--' + id + ')">' + esc(App.PROGRAMS[id].short) + ' <b class="os-mono">' + total[id] + '</b></span>';
+    }).join('') + '<span class="os-legend__i" style="--prog:var(--track)">Left <b class="os-mono">' + (total.total - total.done) + '</b></span>';
+    return '<section class="os-card os-dcard" aria-label="Overall progress this week">' +
+      '<div class="os-dcard__cap">Overall progress</div>' +
+      '<div class="os-wprog"><svg class="os-wprog__bars" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Tasks done per day this week, by program">' + g + '</svg>' +
+      '<div class="os-wprog__donut">' + donutSVG(total, 170, 26) + '</div></div>' +
+      '<div class="os-legend os-wprog__legend">' + legend + '</div>' +
+      '<p class="os-wprog__sum os-mono">' + total.done + ' / ' + total.total + ' completed this week</p></section>';
+  }
+
+  // ---------- 3c. focus & productivity stars ----------
+  function focusCardHTML() {
+    const day = selDay, locked = isPast(day), r = App.getRating(day);
+    let stars = '';
+    for (let n = 1; n <= 5; n++) {
+      stars += '<button type="button" class="os-star' + (n <= r ? ' is-on' : '') + '" data-rate="' + n + '"' + (locked ? ' disabled' : '') +
+        ' aria-label="' + n + ' star' + (n > 1 ? 's' : '') + '" aria-pressed="' + (n === r) + '">' + STAR + '</button>';
     }
-    return '<div class="os-grid-4 os-section">' +
-      tile('Focus hours', hours1(total), 'All time, all programs', 'bulb') +
-      tile('Goal days', met, 'Days with 2 hours or more', 'clock') +
-      tile('Tasks done', App.todosDone(), 'From Today\'s tasks, all time', 'check') +
-      tile('Active days', sum.activeDays, 'Days with a work entry. PRs are on Progress', 'calendar') +
-      '</div>';
+    const days = weekDays();
+    const week = days.map(function (d, i) {
+      const v = App.getRating(d);
+      return '<div><div class="os-wstars' + (v ? '' : ' is-none') + '">' + (v ? STAR.repeat(v) : '·') + '</div>' + SHORT[i] + '</div>';
+    }).join('');
+    const rated = days.map(App.getRating).filter(Boolean);
+    const avg = rated.length ? (rated.reduce(function (a, b) { return a + b; }, 0) / rated.length).toFixed(1) : null;
+    const note = (App.data.weekFocus || {})[weekStart] || '';
+    return '<section class="os-card os-dcard" aria-label="Focus and productivity">' +
+      '<div class="os-dcard__cap">Focus &amp; productivity</div>' +
+      '<div class="os-stars" role="group" aria-label="Rate ' + App.dayName(day) + '">' + stars + '</div>' +
+      '<p class="os-rate__label">' + SHORT[(new Date(day + 'T12:00').getDay() + 6) % 7] + ': ' + RATE_WORDS[r] + (locked ? ' (locked)' : '') + '</p>' +
+      '<div class="os-weekstars">' + week + '</div>' +
+      '<p class="os-rate__avg">' + (avg ? 'Week average <b class="os-mono">' + avg + '</b> / 5' : '<span class="os-muted">Rate each day out of 5</span>') + '</p>' +
+      '<textarea class="os-textarea os-weeknote" id="week-note" rows="3" maxlength="1000" placeholder="Weekly focus: what matters most this week?"' + (isPast(App.addDays(weekStart, 6)) ? ' disabled' : '') + '>' + esc(note) + '</textarea></section>';
+  }
+
+  // ---------- 4. full week board ----------
+  function weekBoardHTML() {
+    const days = weekDays(), today = App.todayKey();
+    const cols = days.map(function (d, i) {
+      const locked = isPast(d), by = doneBy(d);
+      const items = withDay(d);
+      return '<article class="os-wday' + (d === today ? ' is-today' : '') + (locked ? ' is-past' : '') + (d === selDay ? ' is-sel' : '') + '">' +
+        '<button type="button" class="os-wday__head" data-sel="' + d + '" aria-label="Open ' + App.dayName(d) + ' in the daily to-do">' +
+        '<span class="os-wday__name">' + App.dayName(d) + '</span><span class="os-mono os-small">' + App.formatDate(d) + '</span>' +
+        '<span class="os-wday__tag">' + (d === today ? 'Today' : locked ? 'Locked' : '&nbsp;') + '</span></button>' +
+        '<div class="os-wday__donut">' + donutSVG(by, 92, 16) + '</div>' +
+        '<div class="os-wday__label"><span>Tasks</span><span class="os-wstars">' + (App.getRating(d) ? STAR.repeat(App.getRating(d)) : '') + '</span></div>' +
+        '<ul class="os-tasklist os-tasklist--sm">' + (items.length ? items.map(function (t) { return taskItemHTML(t, locked); }).join('')
+          : '<li class="os-list-empty os-task-empty">' + (locked ? 'No tasks were planned.' : 'No tasks yet.') + '</li>') + '</ul>' +
+        (locked ? '<div class="os-wday__locked">Locked</div>'
+          : '<form class="os-wday__add" data-todo-form data-day="' + d + '"><input class="os-input" name="text" placeholder="Add a task" maxlength="200" aria-label="Add a task for ' + App.dayName(d) + '" autocomplete="off">' +
+            '<select class="os-select os-select--sm" name="tag" aria-label="Tag">' + App.PROGRAM_ORDER.map(function (id) {
+              return '<option value="' + id + '"' + (id === tag ? ' selected' : '') + '>' + esc(App.PROGRAMS[id].short) + '</option>'; }).join('') + '</select>' +
+            '<button type="submit" class="os-btn os-btn--primary os-btn--sm os-btn--sq" aria-label="Add">' + App.icon('plus') + '</button></form>') +
+        '</article>';
+    }).join('');
+    const end = App.addDays(weekStart, 6);
+    return '<section class="os-card os-weekboard os-section" aria-label="Full week">' +
+      '<div class="os-weekboard__head"><h2 class="os-h2">Full week</h2>' +
+      '<div class="os-row os-weeknav"><button type="button" class="os-btn os-btn--ghost os-btn--sq" data-week="-1" aria-label="Previous week">' + App.icon('left') + '</button>' +
+      '<span class="os-mono">' + App.formatDate(weekStart) + ' – ' + App.formatDate(end) + '</span>' +
+      '<button type="button" class="os-btn os-btn--ghost os-btn--sq" data-week="1" aria-label="Next week">' + App.icon('right') + '</button>' +
+      '<button type="button" class="os-btn os-btn--ghost" data-week="0"' + (weekStart === App.weekStart(App.todayKey()) ? ' disabled' : '') + '>This week</button></div>' +
+      '<p class="os-hint">Tap a day\'s name to open it in the daily to-do. Past days are locked.</p></div>' +
+      '<div class="os-wdays">' + cols + '</div></section>';
   }
 
   // ---------- 4. charts ----------
@@ -222,79 +350,84 @@
       '<span class="os-hcell" data-l="3"></span><span class="os-hcell" data-l="4"></span> 2h+</div></section>';
   }
 
-  // ---------- 5. program cards ----------
-  function programsHTML(sum) {
-    const today = App.todayKey(), monday = App.weekStart(today);
-    const allDays = App.focusAllDays();
-    return '<div class="os-grid-4 os-section os-pcards">' + App.PROGRAM_ORDER.map(function (id) {
-      const info = App.PROGRAMS[id];
-      let week = 0, total = 0, entries = 0;
-      allDays.forEach(function (d) { const s = App.focusOn(d)[id] || 0; total += s; if (d >= monday) week += s; });
-      Object.keys(App.data.log || {}).forEach(function (d) { entries += App.getLog(d, id).length; });
-      let tasksDone = 0;
-      Object.keys(App.data.todos || {}).forEach(function (d) { App.data.todos[d].forEach(function (t) { if (t.tag === id && t.done) tasksDone++; }); });
-      const weekPct = Math.min(100, week / (GOAL * 7) * 100);
-      return '<a class="os-pcard" href="' + info.page + '" style="--prog:var(--' + id + ')">' +
-        '<div class="os-pcard__top"><span class="os-pcard__dot">' + esc(info.short.charAt(0)) + '</span><span class="os-pcard__name">' + esc(info.short) + '</span>' + App.icon('right') + '</div>' +
-        '<span class="os-pcard__hours os-mono">' + hours1(total) + '<small>h</small></span>' +
-        '<span class="os-pcard__sub">' + hm(week) + ' this week</span>' +
-        '<span class="os-pcard__bar"><span style="width:' + weekPct + '%"></span></span>' +
-        '<span class="os-pcard__facts"><span><b class="os-mono">' + tasksDone + '</b> tasks done</span><span><b class="os-mono">' + entries + '</b> work entries</span></span>' +
-        '</a>';
-    }).join('') + '</div>';
-  }
-
   // ---------- page ----------
   App.render = function () {
-    const sum = App.prSummary();
     App.mount(document.getElementById('app'),
       '<div class="os-dash-head"><p class="os-label">Your open source dashboard</p><h1 class="os-h1">Planner</h1></div>' +
       '<div class="os-hero">' + timerHTML() + todayHTML() + '</div>' +
-      tasksHTML() +
-      overallHTML(sum) +
-      '<div class="os-split os-section os-charts">' + weekChartHTML() + heatHTML() + '</div>' +
-      '<div class="os-section-head os-section"><h2 class="os-label">Programs</h2></div>' +
-      programsHTML(sum));
+      '<div class="os-drow">' + dailyTodoHTML() + weekProgressHTML() + focusCardHTML() + '</div>' +
+      weekBoardHTML() +
+      '<div class="os-split os-section os-charts">' + weekChartHTML() + heatHTML() + '</div>');
     tick();
   };
 
   setInterval(tick, 1000);
 
+  // ---------- events ----------
+  function keepTyping(fn) {
+    const box = document.getElementById('todo-text');
+    const typed = box ? box.value : '';
+    fn();
+    const again = document.getElementById('todo-text');
+    if (again) { again.value = typed; }
+  }
   document.addEventListener('submit', function (ev) {
     const form = ev.target.closest('[data-todo-form]');
     if (!form) return;
     ev.preventDefault();
+    const day = form.dataset.day;
+    if (isPast(day)) return;
     const text = form.text.value.trim();
     if (!text) { form.text.focus(); return; }
-    App.ensureTodos(App.todayKey()).push({ id: App.uid(), text: text, tag: tag, done: false });
+    const t = form.tag ? form.tag.value : tag;
+    App.ensureTodos(day).push({ id: App.uid(), text: text, tag: t, done: false });
     App.commit();
-    const box = document.getElementById('todo-text');
+    const box = form.id ? null : document.querySelector('[data-todo-form][data-day="' + day + '"] input[name="text"]');
     if (box) box.focus();
   });
   document.addEventListener('change', function (ev) {
     const box = ev.target.closest('[data-todo="toggle"]');
-    if (!box) return;
-    const t = App.getTodos(App.todayKey()).find(function (x) { return x.id === box.dataset.id; });
+    if (!box || isPast(box.dataset.day)) return;
+    const t = App.getTodos(box.dataset.day).find(function (x) { return x.id === box.dataset.id; });
     if (t) { t.done = box.checked; App.commit(); }
+  });
+  let noteTimer;
+  document.addEventListener('input', function (ev) {
+    if (ev.target.id !== 'week-note') return;
+    if (!App.data.weekFocus) App.data.weekFocus = {};
+    App.data.weekFocus[weekStart] = ev.target.value;
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(function () { App.save(); }, 600);
   });
 
   document.addEventListener('click', function (ev) {
     const tg = ev.target.closest('[data-tag]');
-    if (tg) {
-      tag = tg.dataset.tag;
-      const typed = (document.getElementById('todo-text') || {}).value || '';
-      App.render();
-      const box = document.getElementById('todo-text');
-      if (box) { box.value = typed; box.focus(); }
+    if (tg) { keepTyping(function () { tag = tg.dataset.tag; App.render(); }); const b = document.getElementById('todo-text'); if (b) b.focus(); return; }
+    const sel = ev.target.closest('[data-sel]');
+    if (sel) { keepTyping(function () { selDay = sel.dataset.sel; App.render(); }); document.querySelector('.os-drow').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+    const wk = ev.target.closest('[data-week]');
+    if (wk) {
+      const n = +wk.dataset.week;
+      weekStart = n ? App.addDays(weekStart, 7 * n) : App.weekStart(App.todayKey());
+      const today = App.todayKey();
+      selDay = today >= weekStart && today <= App.addDays(weekStart, 6) ? today : weekStart;
+      keepTyping(App.render);
       return;
     }
-    const fl = ev.target.closest('[data-filter]');
-    if (fl) { filter = fl.dataset.filter; App.render(); return; }
+    const rate = ev.target.closest('[data-rate]');
+    if (rate) {
+      if (isPast(selDay)) return;
+      const n = +rate.dataset.rate;
+      App.setRating(selDay, App.getRating(selDay) === n ? 0 : n);
+      keepTyping(App.commit);
+      return;
+    }
     const del = ev.target.closest('[data-todo="delete"]');
     if (del) {
-      const list = App.getTodos(App.todayKey());
+      if (isPast(del.dataset.day)) return;
+      const list = App.getTodos(del.dataset.day);
       const i = list.findIndex(function (x) { return x.id === del.dataset.id; });
-      if (i > -1) { list.splice(i, 1); App.commit(); }
+      if (i > -1) { list.splice(i, 1); keepTyping(App.commit); }
       return;
     }
     const chip = ev.target.closest('[data-pick]');
@@ -302,13 +435,13 @@
       pick = chip.dataset.pick;
       const r = App.timerRunning();
       if (r && r.program !== pick) App.startTimer(pick); // switch program: time so far stays with the old one
-      App.render();
+      keepTyping(App.render);
       return;
     }
     const btn = ev.target.closest('[data-timer]');
     if (!btn) return;
     if (btn.dataset.timer === 'start') App.startTimer(pick);
     else App.stopTimer();
-    App.render();
+    keepTyping(App.render);
   });
 })(window.App);
