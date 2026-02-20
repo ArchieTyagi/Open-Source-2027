@@ -1,6 +1,7 @@
 /* progress.js
    Progress page: your daily reports.
-   Top: focus hours, days the 2-hour goal was met, tasks done, merged PRs.
+   Top: focus hours, days the 2-hour goal was met, tasks done, active days, merged PRs.
+   Then one card per program: hours, time this week, tasks done, work entries, merged PRs.
    Below: one report per day (newest first): focus time vs the goal, time per program,
    the tasks you planned and finished, the work you logged, and PRs opened or updated.
    Everything is read from what you already saved (timer, Today's tasks, work log, Add PR). */
@@ -39,12 +40,36 @@
       return '<div class="os-stat os-stat--fancy"><span class="os-stat__icon">' + App.icon(icon) + '</span>' +
         '<span class="os-label">' + label + '</span><span class="os-num-lg">' + num + '</span><span class="os-stat__note">' + note + '</span></div>';
     }
-    return '<div class="os-grid-4">' +
+    return '<div class="os-tiles5">' +
       tile('Focus hours', (total / 3600).toFixed(1), 'All time', 'clock') +
       tile('Goal days', met, 'Days with 2 hours or more', 'check') +
       tile('Tasks done', App.todosDone(), 'From Today\'s tasks', 'calendar') +
+      tile('Active days', sum.activeDays, 'Days you logged work or a PR', 'org') +
       tile('Merged PRs', sum.merged, sum.review + ' in review' + (sum.closed ? ' · ' + sum.closed + ' closed' : ''), 'branch') +
       '</div>';
+  }
+
+  // ---------- one card per program ----------
+  function programsHTML() {
+    const today = App.todayKey(), monday = App.weekStart(today);
+    const allDays = App.focusAllDays();
+    const sum = App.prSummary();
+    return '<div class="os-grid-4 os-pcards">' + App.PROGRAM_ORDER.map(function (id) {
+      const info = App.PROGRAMS[id];
+      let week = 0, total = 0, entries = 0, tasksDone = 0;
+      allDays.forEach(function (d) { const s = App.focusOn(d)[id] || 0; total += s; if (d >= monday) week += s; });
+      Object.keys(App.data.log || {}).forEach(function (d) { entries += App.getLog(d, id).length; });
+      Object.keys(App.data.todos || {}).forEach(function (d) { App.data.todos[d].forEach(function (t) { if (t.tag === id && t.done) tasksDone++; }); });
+      const merged = sum.prs.filter(function (p) { return p.program === id && p.status === 'merged'; }).length;
+      const weekPct = Math.min(100, week / (GOAL * 7) * 100);
+      return '<a class="os-pcard" href="' + info.page + '" style="--prog:var(--' + id + ')">' +
+        '<div class="os-pcard__top"><span class="os-pcard__dot">' + esc(info.short.charAt(0)) + '</span><span class="os-pcard__name">' + esc(info.short) + '</span>' + App.icon('right') + '</div>' +
+        '<span class="os-pcard__hours os-mono">' + (total / 3600).toFixed(1) + '<small>h</small></span>' +
+        '<span class="os-pcard__sub">' + hm(week) + ' this week</span>' +
+        '<span class="os-pcard__bar"><span style="width:' + weekPct + '%"></span></span>' +
+        '<span class="os-pcard__facts"><span><b class="os-mono">' + tasksDone + '</b> tasks done</span><span><b class="os-mono">' + entries + '</b> work entries</span><span><b class="os-mono">' + merged + '</b> merged</span></span>' +
+        '</a>';
+    }).join('') + '</div>';
   }
 
   // ---------- one day's report ----------
@@ -109,6 +134,8 @@
     App.mount(document.getElementById('app'),
       '<div class="os-phead"><div><p class="os-label">Your daily reports</p><h1 class="os-h1">Progress</h1></div></div>' +
       tilesHTML(sum) +
+      '<div class="os-section-head os-section"><h2 class="os-h2">Programs</h2></div>' +
+      programsHTML() +
       '<div class="os-section-head os-section"><h2 class="os-h2">Day by day</h2><span class="os-card__meta">' + days.length + ' day' + (days.length === 1 ? '' : 's') + ' with activity</span></div>' +
       '<div class="os-stack">' + shown.map(reportHTML).join('') + '</div>' +
       (days.length > shown.length ? '<div class="os-row os-section" style="justify-content:center"><button type="button" class="os-btn os-btn--ghost" data-more>Show older days</button></div>' : ''));
