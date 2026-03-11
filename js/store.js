@@ -8,8 +8,8 @@
      weekFocus:     { "2026-10-26": "text for that week" },      key = the Monday
      programs:      { gsoc: { orgs, daily, milestones, journal, proposals, timeline }, ... },
      contributions: [{ id, date, what, project, type, status }],
-     log:           { "2026-11-22": { gsoc: [{ id, org, tech, issue, issueLink, repo, pr, prStatus, did, learned }] } }
-                    (the Planner page: what you worked on each day, per program)
+     log:           { "2026-11-22": { gsoc: [{ id, org, tech, issue, issueLink, repo, prs: [{ link, status }], did, learned }] } }
+                    (the work log on each program page; the Planner shows a summary)
    } */
 
 (function (App) {
@@ -101,18 +101,20 @@
       App.PROGRAM_ORDER.forEach(function (programId) {
         App.getLog(dayKey, programId).forEach(function (e) {
           any = true;
-          if (!e.pr || !App.PR_STATUS[e.prStatus]) return;
-          const key = App.shortUrl(e.pr).toLowerCase();
-          const old = prs[key];
-          prs[key] = {
-            link: e.pr,
-            program: programId,
-            org: e.org,
-            title: e.issue || (old && old.title) || '',
-            status: e.prStatus,
-            firstDay: old ? old.firstDay : dayKey,
-            lastDay: dayKey
-          };
+          App.entryPRs(e).forEach(function (pr) {
+            if (!App.PR_STATUS[pr.status]) return;
+            const key = App.shortUrl(pr.link).toLowerCase().replace(/\/+$/, '');
+            const old = prs[key];
+            prs[key] = {
+              link: pr.link,
+              program: programId,
+              org: e.org,
+              title: e.issue || (old && old.title) || '',
+              status: pr.status,
+              firstDay: old ? old.firstDay : dayKey,
+              lastDay: dayKey
+            };
+          });
         });
       });
       if (any) activeDays++;
