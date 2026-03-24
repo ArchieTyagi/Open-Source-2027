@@ -8,7 +8,7 @@
      weekFocus:     { "2026-10-26": "text for that week" },      key = the Monday
      programs:      { gsoc: { orgs, daily, milestones, journal, proposals, timeline }, ... },
      contributions: [{ id, date, what, project, type, status }],
-     log:           { "2026-11-22": { gsoc: [{ id, org, tech, issue, issueLink, repo, did, learned }] } }
+     log:           { "2026-11-22": { gsoc: [{ id, org, tech, issue, issueLink, repo, pr, prStatus, did, learned }] } }
                     (the Planner page: what you worked on each day, per program)
    } */
 
@@ -83,6 +83,47 @@
     if (!day) return;
     Object.keys(day).forEach(function (id) { if (!day[id].length) delete day[id]; });
     if (!Object.keys(day).length) delete App.data.log[dayKey];
+  };
+
+  // ---------- PRs and active days, built from the Planner log ----------
+  // Nothing is typed in twice: the Progress and Contributions pages read this.
+  // A PR is known by its link. If the same link is in entries on several days,
+  // the newest day's status wins (so "In review" today and "Merged" tomorrow = Merged).
+  App.PR_STATUS = {
+    review: 'In review',
+    merged: 'Merged'
+  };
+  App.prSummary = function () {
+    const prs = {};
+    let activeDays = 0;
+    Object.keys(App.data.log || {}).sort().forEach(function (dayKey) {
+      let any = false;
+      App.PROGRAM_ORDER.forEach(function (programId) {
+        App.getLog(dayKey, programId).forEach(function (e) {
+          any = true;
+          if (!e.pr || !App.PR_STATUS[e.prStatus]) return;
+          const key = App.shortUrl(e.pr).toLowerCase();
+          const old = prs[key];
+          prs[key] = {
+            link: e.pr,
+            program: programId,
+            org: e.org,
+            title: e.issue || (old && old.title) || '',
+            status: e.prStatus,
+            firstDay: old ? old.firstDay : dayKey,
+            lastDay: dayKey
+          };
+        });
+      });
+      if (any) activeDays++;
+    });
+    const list = Object.keys(prs).map(function (k) { return prs[k]; });
+    return {
+      activeDays: activeDays,
+      prs: list,
+      merged: list.filter(function (p) { return p.status === 'merged'; }).length,
+      review: list.filter(function (p) { return p.status === 'review'; }).length
+    };
   };
 
   // ---------- programs ----------
