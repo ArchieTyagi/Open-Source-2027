@@ -175,9 +175,14 @@
       '</div>';
   };
 
+  // "github.com/sktime/sktime/pull/42" -> "sktime/sktime #42", so many PRs of one issue can be told apart
+  App.prShortName = function (link) {
+    const m = String(link || '').match(/github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/i);
+    return m ? m[1] + ' #' + m[2] : App.shortUrl(link);
+  };
   App.prLinkHTML = function (p) {
-    return '<a class="os-entry-link" href="' + App.esc(App.safeUrl(p.link)) + '" target="_blank" rel="noopener">' +
-      App.icon('branch') + '<span>' + App.esc(p.title || App.shortUrl(p.link)) + '</span></a>';
+    return '<a class="os-entry-link" href="' + App.esc(App.safeUrl(p.link)) + '" target="_blank" rel="noopener" title="' + App.esc(p.title || '') + '">' +
+      App.icon('branch') + '<span>' + App.esc(App.prShortName(p.link)) + (p.title ? ' &middot; ' + App.esc(p.title) : '') + '</span></a>';
   };
 
 })(window.App);
