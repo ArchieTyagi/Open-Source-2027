@@ -9,6 +9,8 @@
      programs:      { gsoc: { orgs, daily, milestones, journal, proposals, timeline }, ... },
      contributions: [{ id, date, what, project, type, status }],
      log:           { "2026-11-22": { gsoc: [{ id, org, tech, issue, issueLink, repo, prs: [{ link, status }], did, learned }] } }
+     focus:         { days: { "2026-11-22": { gsoc: 3600 } },   seconds of focus time per program
+                      running: { program: "gsoc", since: 1795000000000 } or null }   the timer that is ticking now
                     (the work log on each program page; the Planner shows a summary)
    } */
 
@@ -16,7 +18,7 @@
   const STORAGE_KEY = 'open-source-2027';
 
   function emptyData() {
-    return { version: 1, days: {}, weekFocus: {}, programs: {}, contributions: [], log: {} };
+    return { version: 1, days: {}, weekFocus: {}, programs: {}, contributions: [], log: {}, focus: { days: {}, running: null } };
   }
 
   function load() {
@@ -83,6 +85,76 @@
     if (!day) return;
     Object.keys(day).forEach(function (id) { if (!day[id].length) delete day[id]; });
     if (!Object.keys(day).length) delete App.data.log[dayKey];
+  };
+
+  // ---------- focus timer (daily goal: 2 hours of open source) ----------
+  App.GOAL_SECONDS = 2 * 60 * 60; // change the 2 to set a different daily goal
+
+  function focusData() {
+    if (!App.data.focus) App.data.focus = { days: {}, running: null };
+    if (!App.data.focus.days) App.data.focus.days = {};
+    return App.data.focus;
+  }
+  // Add the time from startMs to endMs to the right day(s). A session past midnight is split.
+  function addSpan(program, startMs, endMs) {
+    const f = focusData();
+    let t = startMs;
+    while (t < endMs) {
+      const d = new Date(t);
+      const midnight = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+      const stop = Math.min(endMs, midnight);
+      const key = App.toKey(d);
+      if (!f.days[key]) f.days[key] = {};
+      f.days[key][program] = (f.days[key][program] || 0) + Math.round((stop - t) / 1000);
+      t = stop;
+    }
+  }
+  App.timerRunning = function () { return focusData().running; };
+  App.startTimer = function (program) {
+    const f = focusData();
+    if (f.running) App.stopTimer();
+    f.running = { program: program, since: Date.now() };
+    App.save();
+  };
+  App.stopTimer = function () {
+    const f = focusData();
+    if (!f.running) return;
+    addSpan(f.running.program, f.running.since, Date.now());
+    f.running = null;
+    App.save();
+  };
+  // Seconds per program on one day, including the timer that is running right now.
+  App.focusOn = function (dayKey) {
+    const f = focusData();
+    const out = Object.assign({}, f.days[dayKey] || {});
+    if (f.running) {
+      const r = f.running, now = Date.now();
+      let t = r.since;
+      while (t < now) {
+        const d = new Date(t);
+        const midnight = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+        const stop = Math.min(now, midnight);
+        if (App.toKey(d) === dayKey) out[r.program] = (out[r.program] || 0) + Math.round((stop - t) / 1000);
+        t = stop;
+      }
+    }
+    return out;
+  };
+  App.focusTotal = function (dayKey) {
+    const by = App.focusOn(dayKey);
+    return Object.keys(by).reduce(function (n, k) { return n + by[k]; }, 0);
+  };
+  // Days in a row that reached the goal, counting back from today (today counts once reached).
+  App.goalStreak = function () {
+    let day = App.todayKey(), n = 0;
+    if (App.focusTotal(day) < App.GOAL_SECONDS) day = App.addDays(day, -1);
+    while (App.focusTotal(day) >= App.GOAL_SECONDS) { n++; day = App.addDays(day, -1); }
+    return n;
+  };
+  App.focusAllDays = function () {
+    const keys = Object.keys(focusData().days);
+    if (focusData().running && keys.indexOf(App.todayKey()) === -1) keys.push(App.todayKey());
+    return keys.sort();
   };
 
   // ---------- PRs and active days, built from the Planner log ----------
