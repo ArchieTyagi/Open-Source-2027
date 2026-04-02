@@ -161,4 +161,23 @@
       addTask(e.target);
     }
   });
+  // ---------- shared by the Progress and Contributions pages ----------
+  // s = App.prSummary(): active days, merged PRs, PRs in review
+  App.statTilesHTML = function (s) {
+    function tile(label, number, note) {
+      return '<div class="os-stat"><span class="os-label">' + label + '</span><span class="os-num-lg">' + number + '</span>' +
+        '<span class="os-stat__note">' + note + '</span></div>';
+    }
+    return '<div class="os-grid-3 os-stats3">' +
+      tile('Active days', s.activeDays, 'Days with at least one Planner entry') +
+      tile('Merged PRs', s.merged, 'PR status set to Merged') +
+      tile('PRs in review', s.review, 'PR status set to Open / in review') +
+      '</div>';
+  };
+
+  App.prLinkHTML = function (p) {
+    return '<a class="os-entry-link" href="' + App.esc(App.safeUrl(p.link)) + '" target="_blank" rel="noopener">' +
+      App.icon('branch') + '<span>' + App.esc(p.title || App.shortUrl(p.link)) + '</span></a>';
+  };
+
 })(window.App);
