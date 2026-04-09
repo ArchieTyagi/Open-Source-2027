@@ -202,4 +202,25 @@
       if (i > -1) { list.splice(i, 1); App.tidyLog(day); App.commit(); }
     }
   });
+  // ---------- running focus timer, shown in the top bar on every page ----------
+  function timerPill() {
+    const top = document.querySelector('.os-top');
+    if (!top || !App.timerRunning) return;
+    let pill = document.getElementById('os-timer-pill');
+    const r = App.timerRunning();
+    if (!r || document.body.dataset.page === 'planner') { if (pill) pill.remove(); return; }
+    if (!pill) {
+      pill = document.createElement('a');
+      pill.id = 'os-timer-pill';
+      pill.className = 'os-timer-pill';
+      pill.href = 'index.html';
+      pill.title = 'Focus timer is running. Open the Planner to pause it.';
+      top.insertBefore(pill, document.getElementById('save-status'));
+    }
+    const sec = App.focusTotal(App.todayKey());
+    const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), sx = sec % 60;
+    pill.innerHTML = '<i></i>' + App.esc(App.PROGRAMS[r.program].short) + ' <span class="os-mono">' + h + ':' + String(m).padStart(2, '0') + ':' + String(sx).padStart(2, '0') + '</span>';
+  }
+  setInterval(timerPill, 1000);
+  document.addEventListener('DOMContentLoaded', timerPill);
 })(window.App);
