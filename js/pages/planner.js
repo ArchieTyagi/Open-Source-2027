@@ -4,7 +4,8 @@
    Below: one block per program (GSoC, ESoC, LFX, Summer of Bitcoin), one under the other.
    Each block holds that day's entries. One entry =
      organization, tech stack, the issue you're working on, issue link,
-     GitHub repo link, what you did, what you learned. */
+     GitHub repo link, PR link + PR status, what you did, what you learned.
+   PRs with a status show up on the Progress and Contributions pages by themselves. */
 
 (function (App) {
   const esc = App.esc;
@@ -39,6 +40,13 @@
       App.icon(icon) + '<span>' + esc(text || App.shortUrl(url)) + '</span></a>';
   }
 
+  function prHTML(e) {
+    if (!e.pr) return '';
+    const status = App.PR_STATUS[e.prStatus];
+    return '<div class="os-log__pr">' + linkHTML('branch', e.pr, 'Pull request') +
+      (status ? '<span class="os-pill os-pill--' + e.prStatus + '">' + status + '</span>' : '<span class="os-pill">No status</span>') + '</div>';
+  }
+
   function entryHTML(programId, e) {
     const tech = (e.tech || []).map(function (t) { return '<span class="os-tech">' + esc(t) + '</span>'; }).join('');
     const issueTitle = e.issue ? esc(e.issue) : '<span class="os-muted">No issue written</span>';
@@ -52,7 +60,8 @@
       (tech ? '<div class="os-log__tech">' + tech + '</div>' : '') +
       '<div class="os-log__grid">' +
       '<div class="os-log__cell"><p class="os-label">Issue I\'m working on</p><p class="os-p">' + issueTitle + '</p>' +
-      '<div class="os-log__links">' + linkHTML('issue', e.issueLink, 'Issue link') + linkHTML('github', e.repo) + '</div></div>' +
+      '<div class="os-log__links">' + linkHTML('issue', e.issueLink, 'Issue link') + linkHTML('github', e.repo) + '</div>' +
+      prHTML(e) + '</div>' +
       '<div class="os-log__cell"><p class="os-label">' + App.icon('check') + 'What I did</p><p class="os-p os-log__text">' + (esc(e.did) || '<span class="os-muted">Not written</span>') + '</p></div>' +
       '<div class="os-log__cell"><p class="os-label">' + App.icon('bulb') + 'What I learned</p><p class="os-p os-log__text">' + (esc(e.learned) || '<span class="os-muted">Not written</span>') + '</p></div>' +
       '</div></article>';
@@ -81,7 +90,7 @@
   // ---------- add / edit form ----------
   function openForm(programId, entry) {
     const info = App.PROGRAMS[programId];
-    const e = entry || { org: '', tech: [], issue: '', issueLink: '', repo: '', did: '', learned: '' };
+    const e = entry || { org: '', tech: [], issue: '', issueLink: '', repo: '', pr: '', prStatus: '', did: '', learned: '' };
     App.openModal({
       title: entry ? 'Edit entry' : 'Add entry',
       subtitle: info.title + ' · ' + App.dayName(day) + ' ' + App.formatDate(day),
@@ -92,16 +101,25 @@
         App.field('Issue you are working on', App.textInput('issue', e.issue, 'e.g. #4521 Fix date parsing in forecaster'), { full: true }) +
         App.field('Issue link', App.textInput('issueLink', e.issueLink, 'github.com/org/repo/issues/123')) +
         App.field('GitHub repo link', App.textInput('repo', e.repo, 'github.com/org/repo')) +
+        App.field('PR link', App.textInput('pr', e.pr, 'github.com/org/repo/pull/456')) +
+        App.field('PR status', App.selectInput('prStatus', [
+          { value: '', label: 'No PR yet' },
+          { value: 'review', label: 'Open / in review' },
+          { value: 'merged', label: 'Merged' }
+        ], e.prStatus || ''), { hint: 'Shows on Progress and Contributions.' }) +
         App.field('What you did', '<textarea class="os-textarea" name="did" rows="3" maxlength="2000" placeholder="e.g. Set up the repo, reproduced the bug, opened a draft PR">' + esc(e.did) + '</textarea>', { full: true }) +
         App.field('What you learned', '<textarea class="os-textarea" name="learned" rows="3" maxlength="2000" placeholder="e.g. How pytest fixtures work">' + esc(e.learned) + '</textarea>', { full: true }),
       onSubmit: function (v) {
         if (!(v.org || '').trim()) return 'Write the organization name.';
+        if (v.prStatus && !v.pr) return 'Add the PR link, or set PR status to "No PR yet".';
         const data = {
           org: v.org.trim(),
           tech: v.tech ? v.tech.split(',').map(function (t) { return t.trim(); }).filter(Boolean) : [],
           issue: (v.issue || '').trim(),
           issueLink: (v.issueLink || '').trim(),
           repo: (v.repo || '').trim(),
+          pr: (v.pr || '').trim(),
+          prStatus: v.pr ? (v.prStatus || '') : '',
           did: (v.did || '').trim(),
           learned: (v.learned || '').trim()
         };
