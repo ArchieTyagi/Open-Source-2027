@@ -273,6 +273,7 @@
     document.title = info.title + ' · Open Source 2027';
     App.mount(document.getElementById('app'),
       headerHTML(p) +
+      App.workLogHTML(id) +
       orgsHTML(p) +
       '<div class="os-grid-3 os-section">' + dailyHTML(p, today) + milestonesHTML(p) + journalHTML(p) + '</div>' +
       '<div class="os-split os-section">' + proposalsHTML(p) + timelineHTML(p) + '</div>');
