@@ -9,6 +9,7 @@
      programs:      { gsoc: { orgs, daily, milestones, journal, proposals, timeline }, ... },
      contributions: [{ id, date, what, project, type, status }],
      log:           { "2026-11-22": { gsoc: [{ id, org, tech, issue, issueLink, repo, prs: [{ link, status }], did, learned }] } }
+     todos:         { "2026-11-23": [{ id, text, tag: "gsoc", done }] }   Today's tasks on the Planner
      focus:         { days: { "2026-11-22": { gsoc: 3600 } },   seconds of focus time per program
                       running: { program: "gsoc", since: 1795000000000 } or null }   the timer that is ticking now
                     (the work log on each program page; the Planner shows a summary)
@@ -18,7 +19,7 @@
   const STORAGE_KEY = 'open-source-2027';
 
   function emptyData() {
-    return { version: 1, days: {}, weekFocus: {}, programs: {}, contributions: [], log: {}, focus: { days: {}, running: null } };
+    return { version: 1, days: {}, weekFocus: {}, programs: {}, contributions: [], log: {}, focus: { days: {}, running: null }, todos: {} };
   }
 
   function load() {
@@ -85,6 +86,22 @@
     if (!day) return;
     Object.keys(day).forEach(function (id) { if (!day[id].length) delete day[id]; });
     if (!Object.keys(day).length) delete App.data.log[dayKey];
+  };
+
+  // ---------- Today's tasks (Planner to-do list, each task tagged with a program) ----------
+  App.getTodos = function (dayKey) {
+    if (!App.data.todos) App.data.todos = {};
+    return App.data.todos[dayKey] || [];
+  };
+  App.ensureTodos = function (dayKey) {
+    if (!App.data.todos) App.data.todos = {};
+    if (!App.data.todos[dayKey]) App.data.todos[dayKey] = [];
+    return App.data.todos[dayKey];
+  };
+  App.todosDone = function () {
+    let n = 0;
+    Object.keys(App.data.todos || {}).forEach(function (d) { App.data.todos[d].forEach(function (t) { if (t.done) n++; }); });
+    return n;
   };
 
   // ---------- focus timer (daily goal: 2 hours of open source) ----------
