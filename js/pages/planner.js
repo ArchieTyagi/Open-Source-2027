@@ -1,10 +1,11 @@
 /* planner.js
    The Planner page (index.html): your open source dashboard.
    1. Focus timer: aim for 2 hours of open source every day. Pick a program, press Start.
-   2. Today: what you logged today, PRs, and your goal streak.
-   3. Overall: total hours, days the goal was met, merged PRs, PRs in review.
+   2. Today: what you logged today, tasks done, and your goal streak.
+   2b. Today's tasks: a to-do list, each task tagged with a program.
+   3. Overall: focus hours, goal days, tasks done, active days. (PR counts live on the Progress page.)
    4. Last 14 days (hours per day vs the 2-hour line) and a 16-week consistency grid.
-   5. One card per program: hours, entries and PRs.
+   5. One card per program: hours, tasks done and work entries.
    You add work entries on each program's own page (GSoC, ESoC, LFX, SoB). */
 
 (function (App) {
@@ -101,17 +102,18 @@
   // ---------- 2. today ----------
   function todayHTML() {
     const today = App.todayKey();
-    let entries = 0, prs = 0;
+    let entries = 0;
+    const todos = App.getTodos(today);
+    const tasksDone = todos.filter(function (t) { return t.done; }).length;
     const rows = App.PROGRAM_ORDER.map(function (id) {
       const list = App.getLog(today, id);
       entries += list.length;
-      const n = list.reduce(function (a, e) { return a + App.entryPRs(e).length; }, 0);
-      prs += n;
+      const tasks = todos.filter(function (t) { return t.tag === id; }).length;
       const orgs = list.map(function (e) { return esc(e.org); }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
       return '<a class="os-todayrow" href="' + App.PROGRAMS[id].page + '" style="--prog:var(--' + id + ')">' +
         '<span class="os-todayrow__name">' + esc(App.PROGRAMS[id].short) + '</span>' +
         '<span class="os-todayrow__what">' + (list.length ? orgs : '<span class="os-muted">Nothing yet</span>') + '</span>' +
-        '<span class="os-todayrow__n os-mono">' + list.length + (n ? ' · ' + n + ' PR' + (n > 1 ? 's' : '') : '') + '</span>' + App.icon('right') + '</a>';
+        '<span class="os-todayrow__n os-mono">' + list.length + (tasks ? ' · ' + tasks + ' task' + (tasks > 1 ? 's' : '') : '') + '</span>' + App.icon('right') + '</a>';
     }).join('');
     const streak = App.goalStreak();
     return '<section class="os-card os-today" aria-label="Today">' +
@@ -120,9 +122,45 @@
       '<div class="os-streak" title="Days in a row with 2 hours done"><span class="os-streak__n os-mono">' + streak + '</span>' +
       '<span class="os-streak__l">day' + (streak === 1 ? '' : 's') + '<br>goal streak</span></div></div>' +
       '<div class="os-today__nums"><div><span class="os-num-md os-mono">' + entries + '</span><span class="os-label">entries today</span></div>' +
-      '<div><span class="os-num-md os-mono">' + prs + '</span><span class="os-label">PRs today</span></div></div>' +
+      '<div><span class="os-num-md os-mono">' + tasksDone + '<small> / ' + todos.length + '</small></span><span class="os-label">tasks done today</span></div></div>' +
       '<div class="os-todayrows">' + rows + '</div>' +
       '<p class="os-hint">Tap a program to add today\'s work on its page.</p></section>';
+  }
+
+  // ---------- Today's tasks: a to-do list, each task tagged GSoC / ESoC / LFX / SoB ----------
+  let tag = App.PROGRAM_ORDER[0];
+  let filter = 'all';
+  function tasksHTML() {
+    const today = App.todayKey();
+    const all = App.getTodos(today);
+    const done = all.filter(function (t) { return t.done; }).length;
+    const shown = all.filter(function (t) { return filter === 'all' || t.tag === filter; })
+      .slice().sort(function (a, b) { return a.done - b.done; }); // open tasks first
+    const tags = App.PROGRAM_ORDER.map(function (id) {
+      return '<button type="button" class="os-pchip os-pchip--sm' + (id === tag ? ' is-on' : '') + '" style="--prog:var(--' + id + ')" data-tag="' + id + '" aria-pressed="' + (id === tag) + '">' + esc(App.PROGRAMS[id].short) + '</button>';
+    }).join('');
+    const filters = ['all'].concat(App.PROGRAM_ORDER).map(function (id) {
+      const n = id === 'all' ? all.length : all.filter(function (t) { return t.tag === id; }).length;
+      const label = id === 'all' ? 'All' : App.PROGRAMS[id].short;
+      return '<button type="button" class="os-tfilter' + (filter === id ? ' is-on' : '') + '" data-filter="' + id + '"' + (id !== 'all' ? ' style="--prog:var(--' + id + ')"' : '') + '>' + esc(label) + ' <span class="os-mono">' + n + '</span></button>';
+    }).join('');
+    const list = shown.length ? shown.map(function (t) {
+      return '<li class="os-task' + (t.done ? ' is-done' : '') + '" style="--prog:var(--' + t.tag + ')">' +
+        '<label class="os-task__check"><input type="checkbox" data-todo="toggle" data-id="' + t.id + '"' + (t.done ? ' checked' : '') + '><span class="os-task__box" aria-hidden="true">' + App.icon('check') + '</span>' +
+        '<span class="os-task__text">' + esc(t.text) + '</span></label>' +
+        '<span class="os-task__tag">' + esc(App.PROGRAMS[t.tag] ? App.PROGRAMS[t.tag].short : t.tag) + '</span>' +
+        '<button type="button" class="os-iconbtn os-iconbtn--danger" data-todo="delete" data-id="' + t.id + '" aria-label="Delete task">' + App.icon('trash') + '</button></li>';
+    }).join('') : '<li class="os-list-empty os-task-empty">' + (all.length ? 'No tasks with this tag today.' : 'No tasks yet. Write what you want to get done today and pick a tag.') + '</li>';
+    const pct = all.length ? Math.round(done / all.length * 100) : 0;
+    return '<section class="os-card os-tasks os-section" aria-label="Today\'s tasks">' +
+      '<div class="os-tasks__head"><div><p class="os-label">To-do list</p><h2 class="os-h2">Today\'s tasks</h2></div>' +
+      '<div class="os-tasks__prog"><span class="os-mono">' + done + ' / ' + all.length + ' done</span><span class="os-pcard__bar"><span style="width:' + pct + '%;--prog:var(--success)"></span></span></div></div>' +
+      '<form class="os-taskform" data-todo-form>' +
+      '<input class="os-input" id="todo-text" name="text" placeholder="e.g. Reply to the mentor on issue #4521" maxlength="200" aria-label="New task" autocomplete="off">' +
+      '<div class="os-pchips" role="group" aria-label="Tag">' + tags + '</div>' +
+      '<button type="submit" class="os-btn os-btn--primary">' + App.icon('plus') + ' Add task</button></form>' +
+      (all.length ? '<div class="os-tfilters" role="group" aria-label="Show tasks with tag">' + filters + '</div>' : '') +
+      '<ul class="os-tasklist">' + list + '</ul></section>';
   }
 
   // ---------- 3. overall ----------
@@ -134,10 +172,10 @@
         '<span class="os-label">' + label + '</span><span class="os-num-lg">' + num + '</span><span class="os-stat__note">' + note + '</span></div>';
     }
     return '<div class="os-grid-4 os-section">' +
-      tile('Focus hours', hours1(total), 'All time, all programs', 'clock') +
-      tile('Goal days', met, 'Days with 2 hours or more', 'check') +
-      tile('Merged PRs', sum.merged, 'Across every program', 'branch') +
-      tile('PRs in review', sum.review, sum.activeDays + ' active days logged', 'issue') +
+      tile('Focus hours', hours1(total), 'All time, all programs', 'bulb') +
+      tile('Goal days', met, 'Days with 2 hours or more', 'clock') +
+      tile('Tasks done', App.todosDone(), 'From Today\'s tasks, all time', 'check') +
+      tile('Active days', sum.activeDays, 'Days with a work entry. PRs are on Progress', 'calendar') +
       '</div>';
   }
 
@@ -193,15 +231,15 @@
       let week = 0, total = 0, entries = 0;
       allDays.forEach(function (d) { const s = App.focusOn(d)[id] || 0; total += s; if (d >= monday) week += s; });
       Object.keys(App.data.log || {}).forEach(function (d) { entries += App.getLog(d, id).length; });
-      const merged = sum.prs.filter(function (p) { return p.program === id && p.status === 'merged'; }).length;
-      const review = sum.prs.filter(function (p) { return p.program === id && p.status === 'review'; }).length;
+      let tasksDone = 0;
+      Object.keys(App.data.todos || {}).forEach(function (d) { App.data.todos[d].forEach(function (t) { if (t.tag === id && t.done) tasksDone++; }); });
       const weekPct = Math.min(100, week / (GOAL * 7) * 100);
       return '<a class="os-pcard" href="' + info.page + '" style="--prog:var(--' + id + ')">' +
         '<div class="os-pcard__top"><span class="os-pcard__dot">' + esc(info.short.charAt(0)) + '</span><span class="os-pcard__name">' + esc(info.short) + '</span>' + App.icon('right') + '</div>' +
         '<span class="os-pcard__hours os-mono">' + hours1(total) + '<small>h</small></span>' +
         '<span class="os-pcard__sub">' + hm(week) + ' this week</span>' +
         '<span class="os-pcard__bar"><span style="width:' + weekPct + '%"></span></span>' +
-        '<span class="os-pcard__facts"><span><b class="os-mono">' + merged + '</b> merged</span><span><b class="os-mono">' + review + '</b> in review</span><span><b class="os-mono">' + entries + '</b> entries</span></span>' +
+        '<span class="os-pcard__facts"><span><b class="os-mono">' + tasksDone + '</b> tasks done</span><span><b class="os-mono">' + entries + '</b> work entries</span></span>' +
         '</a>';
     }).join('') + '</div>';
   }
@@ -212,6 +250,7 @@
     App.mount(document.getElementById('app'),
       '<div class="os-dash-head"><p class="os-label">Your open source dashboard</p><h1 class="os-h1">Planner</h1></div>' +
       '<div class="os-hero">' + timerHTML() + todayHTML() + '</div>' +
+      tasksHTML() +
       overallHTML(sum) +
       '<div class="os-split os-section os-charts">' + weekChartHTML() + heatHTML() + '</div>' +
       '<div class="os-section-head os-section"><h2 class="os-label">Programs</h2></div>' +
@@ -221,7 +260,43 @@
 
   setInterval(tick, 1000);
 
+  document.addEventListener('submit', function (ev) {
+    const form = ev.target.closest('[data-todo-form]');
+    if (!form) return;
+    ev.preventDefault();
+    const text = form.text.value.trim();
+    if (!text) { form.text.focus(); return; }
+    App.ensureTodos(App.todayKey()).push({ id: App.uid(), text: text, tag: tag, done: false });
+    App.commit();
+    const box = document.getElementById('todo-text');
+    if (box) box.focus();
+  });
+  document.addEventListener('change', function (ev) {
+    const box = ev.target.closest('[data-todo="toggle"]');
+    if (!box) return;
+    const t = App.getTodos(App.todayKey()).find(function (x) { return x.id === box.dataset.id; });
+    if (t) { t.done = box.checked; App.commit(); }
+  });
+
   document.addEventListener('click', function (ev) {
+    const tg = ev.target.closest('[data-tag]');
+    if (tg) {
+      tag = tg.dataset.tag;
+      const typed = (document.getElementById('todo-text') || {}).value || '';
+      App.render();
+      const box = document.getElementById('todo-text');
+      if (box) { box.value = typed; box.focus(); }
+      return;
+    }
+    const fl = ev.target.closest('[data-filter]');
+    if (fl) { filter = fl.dataset.filter; App.render(); return; }
+    const del = ev.target.closest('[data-todo="delete"]');
+    if (del) {
+      const list = App.getTodos(App.todayKey());
+      const i = list.findIndex(function (x) { return x.id === del.dataset.id; });
+      if (i > -1) { list.splice(i, 1); App.commit(); }
+      return;
+    }
     const chip = ev.target.closest('[data-pick]');
     if (chip) {
       pick = chip.dataset.pick;
