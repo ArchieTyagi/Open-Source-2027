@@ -20,7 +20,7 @@ Your data is saved in the browser's localStorage (a small storage space inside t
 
 ```
 open-source-2027/
-├── index.html            Planner (daily log: one block per program, today's date on top)
+├── index.html            Planner (summary of the day across all programs)
 ├── gsoc.html             ┐
 ├── esoc.html             │
 ├── lfx.html              │ Program pages. They all use the SAME template:
@@ -40,7 +40,8 @@ open-source-2027/
     ├── components/
     │   ├── ui.js         Shared HTML pieces: checklist, stars, rings, pills, empty states
     │   ├── modal.js      The pop-up form (Add organization, Add proposal, Add date)
-    │   └── layout.js     Top bar, side menu and footer on every page
+    │   ├── layout.js     Top bar, side menu and footer on every page
+    │   └── worklog.js    The daily work log (entries with many PRs) on each program page
     └── pages/
         ├── planner.js
         ├── program.js    One template for every program page
@@ -75,7 +76,7 @@ const id = document.body.dataset.program;   // "esoc"
 const info = App.PROGRAMS[id];               // name, title, link, milestones, dates
 ```
 
-**PRs are typed in once.** On the Planner, an entry can have a PR link and a PR status (Open / in review, or Merged). The Progress and Contributions pages read those entries by themselves (`App.prSummary` in `js/store.js`). A PR is known by its link, so if the same link is on several days, the newest day's status counts. Active days = days with at least one Planner entry.
+**PRs are typed in once.** Each program page (GSoC, ESoC, LFX, SoB) has a "Today's work" log. An entry there can hold any number of PRs, each with its own link and status (Open / in review, or Merged). The Planner shows a summary of the day across all programs. The Progress and Contributions pages read those entries by themselves (`App.prSummary` in `js/store.js`). A PR is known by its link, so if the same link is on several days, the newest day's status counts. Active days = days with at least one Planner entry.
 
 The side menu works like YouTube's: the button at the top left switches between the full menu and a small icon menu (remembered in the browser). On a phone the menu is hidden and the button slides it in.
 
@@ -95,7 +96,7 @@ Everything lives in one object, `App.data`:
 {
   log: {                                                // the Planner page
     "2026-11-22": {
-      gsoc: [{ id, org, tech: [], issue, issueLink, repo, pr, prStatus, did, learned }]
+      gsoc: [{ id, org, tech: [], issue, issueLink, repo, prs: [{ link, status }], did, learned }]
     }
   },
   days: {},        // from the old weekly planner (not shown any more)
