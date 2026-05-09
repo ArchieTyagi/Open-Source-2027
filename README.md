@@ -25,8 +25,8 @@ open-source-2027/
 ├── esoc.html             │
 ├── lfx.html              │ Program pages. They all use the SAME template:
 ├── sob.html              ┘ js/pages/program.js
-├── progress.html         Streak, active days, tasks done, merged PRs, heatmap
-├── contributions.html    Log of PRs, issues and docs fixes
+├── progress.html         Active days, merged PRs, PRs in review, per program and organization
+├── contributions.html    Every PR from the Planner, newest first (nothing typed in here)
 │
 ├── css/
 │   ├── tokens.css        Colours, fonts, spacing, corners (change the look here)
@@ -75,6 +75,8 @@ const id = document.body.dataset.program;   // "esoc"
 const info = App.PROGRAMS[id];               // name, title, link, milestones, dates
 ```
 
+**PRs are typed in once.** On the Planner, an entry can have a PR link and a PR status (Open / in review, or Merged). The Progress and Contributions pages read those entries by themselves (`App.prSummary` in `js/store.js`). A PR is known by its link, so if the same link is on several days, the newest day's status counts. Active days = days with at least one Planner entry.
+
 The side menu works like YouTube's: the button at the top left switches between the full menu and a small icon menu (remembered in the browser). On a phone the menu is hidden and the button slides it in.
 
 The program colour comes from CSS. `layout.js` sets `--prog: var(--esoc)` on the page, and every place that uses `var(--prog)` (title, chips, timeline, org avatars) turns teal.
@@ -93,10 +95,10 @@ Everything lives in one object, `App.data`:
 {
   log: {                                                // the Planner page
     "2026-11-22": {
-      gsoc: [{ id, org, tech: [], issue, issueLink, repo, did, learned }]
+      gsoc: [{ id, org, tech: [], issue, issueLink, repo, pr, prStatus, did, learned }]
     }
   },
-  days: {},        // from the old weekly planner, kept so old data still counts on Progress
+  days: {},        // from the old weekly planner (not shown any more)
   weekFocus: {},   // from the old weekly planner
   programs: {
     esoc: {
@@ -108,7 +110,7 @@ Everything lives in one object, `App.data`:
       timeline:   [{ id, date, title, tag, note }]
     }
   },
-  contributions: [{ id, date, what, project, type, status }]
+  contributions: [] // old hand-typed list (not shown any more)
 }
 ```
 
