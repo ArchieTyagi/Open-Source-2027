@@ -53,12 +53,6 @@ button.os-step:focus-visible { outline: 2px solid var(--accent); outline-offset:
 /* extra pill colours */
 .os-pill--closed { --c: var(--muted); }
 
-/* deadlines */
-.os-dl.is-past { opacity: .55; }
-.os-dl__note { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; font-weight: 400; color: var(--muted); }
-.os-legend-row { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 16px; }
-.os-legend-row > span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; color: var(--muted); }
-
 /* touch screens have no hover, so keep delete buttons visible */
 @media (hover: none) {
   .os-task .os-iconbtn, .os-entry .os-iconbtn, .os-tl__del { opacity: 1; }
