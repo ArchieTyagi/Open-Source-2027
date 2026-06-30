@@ -7,14 +7,16 @@
      days:          { "2026-11-01": { tasks: [{ id, text, done }], rating: 0..5 } },
      weekFocus:     { "2026-10-26": "text for that week" },      key = the Monday
      programs:      { gsoc: { orgs, daily, milestones, journal, proposals, timeline }, ... },
-     contributions: [{ id, date, what, project, type, status }]
+     contributions: [{ id, date, what, project, type, status }],
+     log:           { "2026-11-22": { gsoc: [{ id, org, tech, issue, issueLink, repo, did, learned }] } }
+                    (the Planner page: what you worked on each day, per program)
    } */
 
 (function (App) {
   const STORAGE_KEY = 'open-source-2027';
 
   function emptyData() {
-    return { version: 1, days: {}, weekFocus: {}, programs: {}, contributions: [] };
+    return { version: 1, days: {}, weekFocus: {}, programs: {}, contributions: [], log: {} };
   }
 
   function load() {
@@ -63,6 +65,24 @@
   App.ensureDay = function (key) {
     if (!App.data.days[key]) App.data.days[key] = { tasks: [], rating: 0 };
     return App.data.days[key];
+  };
+
+  // ---------- daily log (Planner page) ----------
+  App.getLog = function (dayKey, programId) {
+    const day = App.data.log[dayKey];
+    return (day && day[programId]) || [];
+  };
+  App.ensureLog = function (dayKey, programId) {
+    if (!App.data.log[dayKey]) App.data.log[dayKey] = {};
+    if (!App.data.log[dayKey][programId]) App.data.log[dayKey][programId] = [];
+    return App.data.log[dayKey][programId];
+  };
+  // Remove empty days so the saved data stays small.
+  App.tidyLog = function (dayKey) {
+    const day = App.data.log[dayKey];
+    if (!day) return;
+    Object.keys(day).forEach(function (id) { if (!day[id].length) delete day[id]; });
+    if (!Object.keys(day).length) delete App.data.log[dayKey];
   };
 
   // ---------- programs ----------
