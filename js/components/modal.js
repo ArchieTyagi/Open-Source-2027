@@ -155,7 +155,7 @@
     if (first) first.focus();
   };
 
-  // ---------- the "Add date" form, used on program pages and the Deadlines page ----------
+  // ---------- the "Add date" form, used on the program pages ----------
   // fixedProgram = program id, or empty to show a program picker.
   App.openDateModal = function (fixedProgram) {
     const programField = fixedProgram ? '' : App.field('Program', App.selectInput('program',
@@ -163,7 +163,7 @@
 
     App.openModal({
       title: 'Add a date',
-      subtitle: fixedProgram ? 'For ' + App.PROGRAMS[fixedProgram].title + '.' : 'It shows on the program page and here.',
+      subtitle: fixedProgram ? 'For ' + App.PROGRAMS[fixedProgram].title + '.' : 'It shows on the program page.',
       submitLabel: 'Add date',
       body: programField +
         App.field('What happens', App.textInput('title', '', 'e.g. Applications close'), { full: true }) +
