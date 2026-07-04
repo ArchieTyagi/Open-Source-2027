@@ -5,7 +5,6 @@
 a.os-brand { color: var(--ink); text-decoration: none; }
 .os-saved.is-error { color: var(--danger); }
 .os-saved.is-error::before { background: var(--danger); }
-.os-tab { text-decoration: none; }
 
 /* page header link to the official site */
 .os-phead__sub a { color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
@@ -18,7 +17,6 @@ a.os-brand { color: var(--ink); text-decoration: none; }
 
 /* empty list inside a card */
 .os-list-empty { margin: 8px 0 0; font-size: 13px; line-height: 18px; color: var(--muted); }
-.os-day .os-list-empty { margin: 0; padding: 12px; }
 
 /* footer */
 .os-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; max-width: 1280px; margin: 0 auto; padding: 18px 32px 28px; border-top: 1px solid var(--line); font-size: 13px; line-height: 18px; color: var(--muted); }
@@ -59,7 +57,7 @@ button.os-step:focus-visible { outline: 2px solid var(--accent); outline-offset:
 }
 
 /* phone */
-@container (max-width: 760px) {
+@media (max-width: 760px) {
   .os-foot { padding: 18px 16px 24px; }
 }
 /* the modal sits outside .os-app, so it uses a normal media query */
