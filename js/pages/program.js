@@ -1,6 +1,5 @@
 /* program.js
-   ONE template for every program page: GSoC, ESoC, LFX, Summer of Bitcoin,
-   Outreachy, FOSSEE (IIT Bombay) and FOSS Overflow (IIT Bhilai).
+   ONE template for every program page: GSoC, ESoC, LFX and Summer of Bitcoin.
    The HTML page says which program it is with <body data-program="gsoc">.
    Sections, top to bottom (same order on a phone):
    Organizations, Daily progress, Total progress, Daily learning, Proposals, Timeline. */
