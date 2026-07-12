@@ -1,30 +1,93 @@
 /* layout.js
-   Draws the parts every page shares: the top bar, the tabs and the footer.
+   Draws the parts every page shares: the top bar, the side menu and the footer.
    Each HTML page only says which tab it is, with <body data-page="...">. */
 
 (function (App) {
-  const TABS = [
-    { page: 'planner', label: 'Planner', href: 'index.html' },
-    { page: 'gsoc', label: 'GSoC', href: 'gsoc.html', program: 'gsoc' },
-    { page: 'esoc', label: 'ESoC', href: 'esoc.html', program: 'esoc' },
-    { page: 'lfx', label: 'LFX', href: 'lfx.html', program: 'lfx' },
-    { page: 'sob', label: 'Summer of Bitcoin', href: 'sob.html', program: 'sob' },
-    { page: 'progress', label: 'Progress', href: 'progress.html' },
-    { page: 'contributions', label: 'Contributions', href: 'contributions.html' }
+  // The pages in the side menu. icon = a line drawing from utils.js,
+  // program = colour dot instead of an icon, short = name in the small menu.
+  const NAV = [
+    { group: '', items: [
+      { page: 'planner', label: 'Planner', short: 'Planner', href: 'index.html', icon: 'calendar' }
+    ] },
+    { group: 'Programs', items: [
+      { page: 'gsoc', label: 'GSoC', short: 'GSoC', href: 'gsoc.html', program: 'gsoc' },
+      { page: 'esoc', label: 'ESoC', short: 'ESoC', href: 'esoc.html', program: 'esoc' },
+      { page: 'lfx', label: 'LFX', short: 'LFX', href: 'lfx.html', program: 'lfx' },
+      { page: 'sob', label: 'Summer of Bitcoin', short: 'SoB', href: 'sob.html', program: 'sob' }
+    ] },
+    { group: 'You', items: [
+      { page: 'progress', label: 'Progress', short: 'Progress', href: 'progress.html', icon: 'chart' },
+      { page: 'contributions', label: 'Contributions', short: 'PRs', href: 'contributions.html', icon: 'branch' }
+    ] }
   ];
 
+  // Open or closed side menu is remembered in this browser.
+  const NAV_KEY = 'open-source-2027-nav';
+  function navWasClosed() {
+    try { return localStorage.getItem(NAV_KEY) === 'closed'; } catch (e) { return false; }
+  }
+  function rememberNav(closed) {
+    try { localStorage.setItem(NAV_KEY, closed ? 'closed' : 'open'); } catch (e) { /* private mode */ }
+  }
+
+  function navItemHTML(t, current) {
+    const active = t.page === current;
+    const mark = t.program
+      ? '<span class="os-nav__dot" style="--prog:var(--' + t.program + ')" aria-hidden="true">' + t.short.charAt(0) + '</span>'
+      : App.icon(t.icon);
+    return '<a class="os-nav__item' + (active ? ' is-active' : '') + '" href="' + t.href + '"' +
+      (active ? ' aria-current="page"' : '') + ' title="' + t.label + '">' + mark +
+      '<span class="os-nav__label">' + t.label + '</span>' +
+      '<span class="os-nav__short" aria-hidden="true">' + t.short + '</span></a>';
+  }
+
   function headerHTML(current) {
-    const tabs = TABS.map(function (t) {
-      const active = t.page === current;
-      const dot = t.program ? '<i style="--prog:var(--' + t.program + ')"></i>' : '';
-      return '<a class="os-tab' + (active ? ' is-active' : '') + '" href="' + t.href + '"' +
-        (active ? ' aria-current="page"' : '') + '>' + dot + t.label + '</a>';
+    const groups = NAV.map(function (g) {
+      return '<div class="os-nav__group">' +
+        (g.group ? '<p class="os-nav__title">' + g.group + '</p>' : '') +
+        g.items.map(function (t) { return navItemHTML(t, current); }).join('') + '</div>';
     }).join('');
     return '<header class="os-top">' +
+      '<button type="button" class="os-menu" data-nav-toggle aria-controls="os-nav" aria-expanded="true" aria-label="Open or close the menu">' + App.icon('menu') + '</button>' +
       '<a class="os-brand" href="index.html">Open Source <b>2027</b></a>' +
+      '<span class="os-spacer"></span>' +
       '<span class="os-saved" id="save-status" role="status">All changes saved</span>' +
       '</header>' +
-      '<nav class="os-tabs" aria-label="Pages">' + tabs + '</nav>';
+      '<nav class="os-nav" id="os-nav" aria-label="Pages">' + groups + '</nav>' +
+      '<div class="os-nav-scrim" data-nav-close hidden></div>';
+  }
+
+  // Menu works like YouTube:
+  //   big screen  = button switches between the full menu and the small icon menu
+  //   phone       = menu is hidden, button slides it in over the page
+  function setupNav() {
+    const app = document.querySelector('.os-app');
+    const btn = document.querySelector('[data-nav-toggle]');
+    const scrim = document.querySelector('[data-nav-close]');
+    const phone = window.matchMedia('(max-width: 760px)');
+
+    function sync() {
+      const open = phone.matches ? app.classList.contains('is-nav-open') : !app.classList.contains('is-nav-mini');
+      btn.setAttribute('aria-expanded', String(open));
+      scrim.hidden = !(phone.matches && open);
+    }
+    if (navWasClosed()) app.classList.add('is-nav-mini');
+
+    btn.addEventListener('click', function () {
+      if (phone.matches) {
+        app.classList.toggle('is-nav-open');
+      } else {
+        const mini = app.classList.toggle('is-nav-mini');
+        rememberNav(mini);
+      }
+      sync();
+    });
+    scrim.addEventListener('click', function () { app.classList.remove('is-nav-open'); sync(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && app.classList.contains('is-nav-open')) { app.classList.remove('is-nav-open'); sync(); btn.focus(); }
+    });
+    phone.addEventListener('change', function () { app.classList.remove('is-nav-open'); sync(); });
+    sync();
   }
 
   function footerHTML() {
@@ -47,9 +110,7 @@
     const program = document.body.dataset.program;
     if (program) document.body.style.setProperty('--prog', 'var(--' + program + ')');
 
-    // On a phone the tabs scroll sideways: bring the current tab into view.
-    const active = document.querySelector('.os-tab.is-active');
-    if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest', inline: 'center' });
+    setupNav();
 
     footer.addEventListener('click', function (e) {
       const btn = e.target.closest('[data-foot]');
