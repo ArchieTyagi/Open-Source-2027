@@ -1,136 +1,139 @@
 /* planner.js
-   The weekly planner (index.html):
-   week bar, then Daily to-do, Overall progress, Focus & productivity,
-   then the full week as 7 day columns. Past days are locked. */
+   The Planner page (index.html): your daily open source work and learning.
+   Top: the day's date on the right, with arrows to move between days.
+   Below: one block per program (GSoC, ESoC, LFX, Summer of Bitcoin), one under the other.
+   Each block holds that day's entries. One entry =
+     organization, tech stack, the issue you're working on, issue link,
+     GitHub repo link, what you did, what you learned. */
 
 (function (App) {
   const esc = App.esc;
-  let weekStart = App.weekStart(App.todayKey()); // Monday of the week on screen
+  let day = App.todayKey(); // the day on screen
 
-  function weekBarHTML(days) {
-    return '<div class="os-weekbar">' +
-      '<button type="button" class="os-btn os-btn--ghost os-btn--sq" data-action="week-prev" aria-label="Previous week">' + App.icon('left') + '</button>' +
-      '<span class="os-weekbar__range">' + App.formatDate(days[0]) + ' &ndash; ' + App.formatDate(days[6]) + '</span>' +
-      '<button type="button" class="os-btn os-btn--ghost os-btn--sq" data-action="week-next" aria-label="Next week">' + App.icon('right') + '</button>' +
-      '<button type="button" class="os-btn os-btn--ghost" data-action="week-today">Today</button>' +
-      '</div>';
+  // ---------- top: title on the left, date on the right ----------
+  function headHTML() {
+    const today = App.todayKey();
+    const isToday = day === today;
+    let total = 0;
+    App.PROGRAM_ORDER.forEach(function (id) { total += App.getLog(day, id).length; });
+
+    return '<div class="os-plan-head">' +
+      '<div><p class="os-label">Daily open source log</p><h1 class="os-h1">Planner</h1>' +
+      '<p class="os-phead__sub">' + total + (total === 1 ? ' entry' : ' entries') + ' on this day across all programs</p></div>' +
+      '<div class="os-plan-date">' +
+      '<div class="os-plan-date__text">' +
+      (isToday ? '<span class="os-flag os-flag--today">Today</span>' : '<span class="os-flag">' + (day < today ? 'Past day' : 'Planned') + '</span>') +
+      '<span class="os-plan-date__day">' + App.dayName(day) + '</span>' +
+      '<span class="os-plan-date__num os-mono">' + App.formatDate(day) + '</span></div>' +
+      '<div class="os-row os-plan-date__nav">' +
+      '<button type="button" class="os-btn os-btn--ghost os-btn--sq" data-action="day-prev" aria-label="Previous day">' + App.icon('left') + '</button>' +
+      '<button type="button" class="os-btn os-btn--ghost" data-action="day-today"' + (isToday ? ' disabled' : '') + '>Today</button>' +
+      '<button type="button" class="os-btn os-btn--ghost os-btn--sq" data-action="day-next" aria-label="Next day">' + App.icon('right') + '</button>' +
+      '</div></div></div>';
   }
 
-  // 1. Daily to-do (always today)
-  function todoHTML(today) {
-    const c = App.countTasks(App.getDay(today).tasks);
-    return '<section class="os-card" aria-label="Daily to-do">' +
-      App.cardHead('Daily to-do', '<span class="os-flag os-flag--today">Today</span>') +
-      '<div class="os-card__body">' +
-      '<div class="os-today-title"><h3 class="os-h3" style="font-size:20px;line-height:26px">Today &middot; ' + App.dayName(today) + '</h3>' +
-      '<span class="os-mono os-small os-muted">' + App.formatDate(today) + '</span></div>' +
-      '<div class="os-done-row" style="margin-top:12px"><span><b>' + c.done + ' of ' + c.total + '</b> done</span></div>' +
-      App.barHTML(c.pct) +
-      '<div style="margin-top:6px">' + App.checklistHTML('day:' + today, { key: 'todo-card', emptyText: 'Nothing planned yet. Add your first task below.' }) + '</div>' +
-      '<p class="os-hint" style="margin-top:10px">Past days are locked. You can change today and plan ahead.</p>' +
-      '</div></section>';
+  // ---------- one entry ----------
+  function linkHTML(icon, url, text) {
+    if (!url) return '';
+    return '<a class="os-entry-link" href="' + esc(App.safeUrl(url)) + '" target="_blank" rel="noopener">' +
+      App.icon(icon) + '<span>' + esc(text || App.shortUrl(url)) + '</span></a>';
   }
 
-  // 2. Overall progress: one bar per day, pink = done, dark = left
-  function chartHTML(days, today) {
-    const counts = days.map(function (d) { return App.countTasks(App.getDay(d).tasks); });
-    const max = Math.max(1, Math.max.apply(null, counts.map(function (c) { return c.total; })));
-    const unit = Math.min(20, 104 / max); // pixels per task, so the tallest bar fits
-    let done = 0, total = 0;
-
-    const cols = counts.map(function (c) {
-      done += c.done; total += c.total;
-      let stack = '';
-      if (!c.total) stack = '<span class="left" style="height:3px;opacity:.6"></span>';
-      if (c.total - c.done) stack += '<span class="left" style="height:' + ((c.total - c.done) * unit) + 'px"></span>';
-      if (c.done) stack += '<span class="done" style="height:' + (c.done * unit) + 'px"></span>';
-      return '<div class="os-bars__col"><span class="os-bars__n">' + (c.total ? c.done + '/' + c.total : '&ndash;') + '</span>' +
-        '<div class="os-bars__stack">' + stack + '</div></div>';
-    }).join('');
-
-    const labels = days.map(function (d) {
-      return '<span' + (d === today ? ' class="is-today"' : '') + '>' + App.dayName(d).slice(0, 3) + '</span>';
-    }).join('');
-    const summary = days.map(function (d, i) { return App.dayName(d).slice(0, 3) + ' ' + counts[i].done + ' of ' + counts[i].total; }).join(', ');
-    const pct = total ? Math.round(done / total * 100) : 0;
-
-    return '<section class="os-card" aria-label="Overall progress">' +
-      App.cardHead('Overall progress', '<span class="os-card__meta">' + (days.indexOf(today) > -1 ? 'This week' : 'Week of ' + App.formatDate(days[0])) + '</span>') +
-      '<div class="os-card__body"><div class="os-chart"><div class="os-chart__plot">' +
-      '<div class="os-bars" role="img" aria-label="Tasks done each day: ' + summary + '">' + cols + '</div>' +
-      '<div class="os-bars__x" aria-hidden="true">' + labels + '</div></div>' +
-      '<div style="display:flex;flex-direction:column;align-items:center;gap:10px">' + App.ringHTML(pct, 'lg', !total) +
-      '<p class="os-p" style="text-align:center"><span class="os-mono" style="font-weight:600">' + done + ' / ' + total + '</span><br>' +
-      '<span class="os-small os-muted">completed this week</span></p></div></div>' +
-      '<div class="os-legend"><span style="--c:var(--accent)">Done</span><span style="--c:var(--track)">Left</span></div>' +
-      '</div></section>';
+  function entryHTML(programId, e) {
+    const tech = (e.tech || []).map(function (t) { return '<span class="os-tech">' + esc(t) + '</span>'; }).join('');
+    const issueTitle = e.issue ? esc(e.issue) : '<span class="os-muted">No issue written</span>';
+    return '<article class="os-log">' +
+      '<div class="os-log__top">' +
+      '<div class="os-log__org">' + App.icon('org') + '<h3 class="os-h3">' + esc(e.org) + '</h3></div>' +
+      '<div class="os-row os-log__actions">' +
+      '<button type="button" class="os-btn os-btn--quiet os-btn--sm os-btn--sq" data-action="edit" data-program="' + programId + '" data-id="' + e.id + '" aria-label="Edit entry">' + App.icon('edit') + '</button>' +
+      '<button type="button" class="os-btn os-btn--quiet os-btn--sm os-btn--sq" data-action="delete" data-program="' + programId + '" data-id="' + e.id + '" aria-label="Delete entry">' + App.icon('trash') + '</button>' +
+      '</div></div>' +
+      (tech ? '<div class="os-log__tech">' + tech + '</div>' : '') +
+      '<div class="os-log__grid">' +
+      '<div class="os-log__cell"><p class="os-label">Issue I\'m working on</p><p class="os-p">' + issueTitle + '</p>' +
+      '<div class="os-log__links">' + linkHTML('issue', e.issueLink, 'Issue link') + linkHTML('github', e.repo) + '</div></div>' +
+      '<div class="os-log__cell"><p class="os-label">' + App.icon('check') + 'What I did</p><p class="os-p os-log__text">' + (esc(e.did) || '<span class="os-muted">Not written</span>') + '</p></div>' +
+      '<div class="os-log__cell"><p class="os-label">' + App.icon('bulb') + 'What I learned</p><p class="os-p os-log__text">' + (esc(e.learned) || '<span class="os-muted">Not written</span>') + '</p></div>' +
+      '</div></article>';
   }
 
-  // 3. Focus & productivity
-  function focusHTML(days, today) {
-    const rated = days.map(function (d) { return App.getDay(d).rating; }).filter(function (r) { return r > 0; });
-    const avg = rated.length ? (rated.reduce(function (a, b) { return a + b; }, 0) / rated.length).toFixed(1) : '&ndash;';
-    const rows = days.map(function (d) {
-      return '<div class="os-rate-row' + (d === today ? ' is-today' : '') + '"><span>' + App.dayName(d).slice(0, 3) + '</span>' +
-        App.starsHTML(d, App.getDay(d).rating, { size: 'sm', label: App.dayName(d) }) + '</div>';
-    }).join('');
-    return '<section class="os-card" aria-label="Focus and productivity">' +
-      App.cardHead('Focus &amp; productivity', '<span class="os-card__meta">Week average <b style="color:var(--ink)">' + avg + ' / 5</b></span>') +
-      '<div class="os-card__body">' +
-      '<p class="os-small os-muted os-p">How focused were you today?</p>' +
-      '<div style="margin:8px 0 14px">' + App.starsHTML(today, App.getDay(today).rating, { size: 'lg', editable: true, label: 'Rate today' }) + '</div>' +
-      '<div style="border-top:1px solid var(--line);padding-top:8px">' + rows + '</div>' +
-      '<label class="os-field" style="margin-top:14px"><span class="os-field__name">Weekly focus</span>' +
-      '<textarea class="os-textarea" rows="2" style="min-height:64px" data-week-focus maxlength="500" placeholder="The one thing that matters most this week">' +
-      esc(App.data.weekFocus[weekStart] || '') + '</textarea></label>' +
-      '</div></section>';
+  // ---------- one block per program ----------
+  function blockHTML(id) {
+    const info = App.PROGRAMS[id];
+    const list = App.getLog(day, id);
+    const body = list.length
+      ? list.map(function (e) { return entryHTML(id, e); }).join('')
+      : '<p class="os-list-empty os-plan-empty">Nothing logged for ' + esc(info.short) + ' on this day.</p>';
+
+    return '<section class="os-card os-plan-block" style="--prog:var(--' + id + ')" aria-label="' + esc(info.title) + '">' +
+      '<div class="os-card__head os-plan-block__head">' +
+      '<div class="os-row" style="gap:10px"><span class="os-plan-block__dot" aria-hidden="true"></span>' +
+      '<h2 class="os-h2">' + esc(info.title) + '</h2>' +
+      '<span class="os-card__meta">' + list.length + (list.length === 1 ? ' entry' : ' entries') + '</span></div>' +
+      '<div class="os-row" style="gap:6px">' +
+      '<a class="os-btn os-btn--quiet os-btn--sm" href="' + info.page + '">Open page</a>' +
+      '<button type="button" class="os-btn os-btn--primary os-btn--sm" data-action="add" data-program="' + id + '">' + App.icon('plus') + ' Add entry</button>' +
+      '</div></div>' +
+      '<div class="os-card__body os-plan-block__body">' + body + '</div></section>';
   }
 
-  // One day column in the full week
-  function dayHTML(key, today) {
-    const day = App.getDay(key);
-    const c = App.countTasks(day.tasks);
-    const isToday = key === today;
-    const locked = key < today;
-    const flag = isToday ? '<span class="os-flag os-flag--today">Today</span>'
-      : locked ? '<span class="os-flag">' + App.icon('lock') + 'Locked</span>' : '';
-    return '<article class="os-day' + (isToday ? ' is-today' : '') + '" aria-label="' + App.dayName(key) + ' ' + App.formatDate(key) + '">' +
-      '<div class="os-day__head"><h3 class="os-day__name">' + App.dayName(key) + '</h3>' +
-      '<div class="os-day__sub"><span class="os-day__date">' + App.formatDate(key) + '</span>' + flag + '</div></div>' +
-      '<div class="os-day__stats">' + App.ringHTML(c.pct, 'sm', !c.total) +
-      App.starsHTML(key, day.rating, { size: 'sm', editable: isToday, label: App.dayName(key) }) + '</div>' +
-      App.checklistHTML('day:' + key, { small: true, emptyText: 'No tasks' }) +
-      '</article>';
+  // ---------- add / edit form ----------
+  function openForm(programId, entry) {
+    const info = App.PROGRAMS[programId];
+    const e = entry || { org: '', tech: [], issue: '', issueLink: '', repo: '', did: '', learned: '' };
+    App.openModal({
+      title: entry ? 'Edit entry' : 'Add entry',
+      subtitle: info.title + ' · ' + App.dayName(day) + ' ' + App.formatDate(day),
+      submitLabel: entry ? 'Save changes' : 'Add entry',
+      body:
+        App.field('Organization', App.textInput('org', e.org, 'e.g. sktime'), { full: true }) +
+        App.chipInput('tech', e.tech, 'e.g. Python') +
+        App.field('Issue you are working on', App.textInput('issue', e.issue, 'e.g. #4521 Fix date parsing in forecaster'), { full: true }) +
+        App.field('Issue link', App.textInput('issueLink', e.issueLink, 'github.com/org/repo/issues/123')) +
+        App.field('GitHub repo link', App.textInput('repo', e.repo, 'github.com/org/repo')) +
+        App.field('What you did', '<textarea class="os-textarea" name="did" rows="3" maxlength="2000" placeholder="e.g. Set up the repo, reproduced the bug, opened a draft PR">' + esc(e.did) + '</textarea>', { full: true }) +
+        App.field('What you learned', '<textarea class="os-textarea" name="learned" rows="3" maxlength="2000" placeholder="e.g. How pytest fixtures work">' + esc(e.learned) + '</textarea>', { full: true }),
+      onSubmit: function (v) {
+        if (!(v.org || '').trim()) return 'Write the organization name.';
+        const data = {
+          org: v.org.trim(),
+          tech: v.tech ? v.tech.split(',').map(function (t) { return t.trim(); }).filter(Boolean) : [],
+          issue: (v.issue || '').trim(),
+          issueLink: (v.issueLink || '').trim(),
+          repo: (v.repo || '').trim(),
+          did: (v.did || '').trim(),
+          learned: (v.learned || '').trim()
+        };
+        if (entry) Object.assign(entry, data);
+        else App.ensureLog(day, programId).push(Object.assign({ id: App.uid() }, data));
+        App.commit();
+      }
+    });
   }
 
   App.render = function () {
-    const today = App.todayKey();
-    const days = App.weekDays(weekStart);
-    let done = 0, total = 0;
-    days.forEach(function (d) { const c = App.countTasks(App.getDay(d).tasks); done += c.done; total += c.total; });
-
     App.mount(document.getElementById('app'),
-      weekBarHTML(days) +
-      '<div class="os-grid-3">' + todoHTML(today) + chartHTML(days, today) + focusHTML(days, today) + '</div>' +
-      '<section class="os-section" aria-label="Full week"><div class="os-section-head"><h2 class="os-label">Full week</h2>' +
-      '<span class="os-card__meta">' + done + ' of ' + total + ' done</span></div>' +
-      '<div class="os-days">' + days.map(function (d) { return dayHTML(d, today); }).join('') + '</div></section>');
+      headHTML() +
+      '<div class="os-stack">' + App.PROGRAM_ORDER.map(blockHTML).join('') + '</div>');
   };
 
-  document.addEventListener('click', function (e) {
-    const el = e.target.closest('[data-action]');
-    if (!el) return;
-    if (el.dataset.action === 'week-prev') { weekStart = App.addDays(weekStart, -7); App.render(); }
-    if (el.dataset.action === 'week-next') { weekStart = App.addDays(weekStart, 7); App.render(); }
-    if (el.dataset.action === 'week-today') { weekStart = App.weekStart(App.todayKey()); App.render(); }
-  });
-
-  // Weekly focus saves as you type (no redraw, so the cursor stays put).
-  document.addEventListener('input', function (e) {
-    if (!e.target.matches('[data-week-focus]')) return;
-    const text = e.target.value;
-    if (text.trim()) App.data.weekFocus[weekStart] = text;
-    else delete App.data.weekFocus[weekStart];
-    App.save();
+  document.addEventListener('click', function (ev) {
+    const el = ev.target.closest('[data-action]');
+    if (!el || !document.getElementById('app').contains(el)) return;
+    const action = el.dataset.action;
+    if (action === 'day-prev') { day = App.addDays(day, -1); App.render(); }
+    if (action === 'day-next') { day = App.addDays(day, 1); App.render(); }
+    if (action === 'day-today') { day = App.todayKey(); App.render(); }
+    if (action === 'add') openForm(el.dataset.program);
+    if (action === 'edit') {
+      const entry = App.getLog(day, el.dataset.program).find(function (x) { return x.id === el.dataset.id; });
+      if (entry) openForm(el.dataset.program, entry);
+    }
+    if (action === 'delete' && confirm('Delete this entry?')) {
+      const list = App.getLog(day, el.dataset.program);
+      const i = list.findIndex(function (x) { return x.id === el.dataset.id; });
+      if (i > -1) { list.splice(i, 1); App.tidyLog(day); App.commit(); }
+    }
   });
 })(window.App);
