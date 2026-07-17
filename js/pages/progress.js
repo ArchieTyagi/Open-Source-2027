@@ -1,7 +1,8 @@
 /* progress.js
    4 stat tiles and a day-by-day heatmap from Nov 2026 to Aug 2027.
-   "Things done" on a day = ticked planner tasks + ticked program to-dos
-   + journal entries + contributions logged that day. */
+   "Things done" on a day = Planner log entries + ticked program to-dos
+   + journal entries + contributions logged that day
+   (+ ticked tasks from the old weekly planner, if you have any saved). */
 
 (function (App) {
   const START = '2026-11-01';
@@ -21,6 +22,9 @@
       (p.journal || []).forEach(function (j) { add(j.date, 1); });
     });
     App.data.contributions.forEach(function (c) { add(c.date, 1); });
+    Object.keys(App.data.log || {}).forEach(function (key) {
+      Object.keys(App.data.log[key]).forEach(function (id) { add(key, App.data.log[key][id].length); });
+    });
     return counts;
   }
 
