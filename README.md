@@ -20,7 +20,7 @@ Your data is saved in the browser's localStorage (a small storage space inside t
 
 ```
 open-source-2027/
-├── index.html            Planner (weekly to-dos, progress, focus)
+├── index.html            Planner (daily log: one block per program, today's date on top)
 ├── gsoc.html             ┐
 ├── esoc.html             │
 ├── lfx.html              │ Program pages. They all use the SAME template:
@@ -40,7 +40,7 @@ open-source-2027/
     ├── components/
     │   ├── ui.js         Shared HTML pieces: checklist, stars, rings, pills, empty states
     │   ├── modal.js      The pop-up form (Add organization, Add proposal, Add date)
-    │   └── layout.js     Top bar, tabs and footer on every page
+    │   └── layout.js     Top bar, side menu and footer on every page
     └── pages/
         ├── planner.js
         ├── program.js    One template for every program page
@@ -75,13 +75,15 @@ const id = document.body.dataset.program;   // "esoc"
 const info = App.PROGRAMS[id];               // name, title, link, milestones, dates
 ```
 
+The side menu works like YouTube's: the button at the top left switches between the full menu and a small icon menu (remembered in the browser). On a phone the menu is hidden and the button slides it in.
+
 The program colour comes from CSS. `layout.js` sets `--prog: var(--esoc)` on the page, and every place that uses `var(--prog)` (title, chips, timeline, org avatars) turns teal.
 
 **To add another program** (say Hacktoberfest):
 1. Add a colour in `css/tokens.css`, like `--hacktoberfest: #...;`
 2. Add an entry in `js/programs.js` and put its id in `App.PROGRAM_ORDER`.
 3. Copy `esoc.html` to `hacktoberfest.html` and change `data-page` and `data-program`.
-4. Add a tab in `js/components/layout.js`.
+4. Add it to the side menu list (`NAV`) in `js/components/layout.js`.
 
 ## What the data looks like
 
@@ -89,10 +91,13 @@ Everything lives in one object, `App.data`:
 
 ```js
 {
-  days: {
-    "2026-11-01": { tasks: [{ id, text, done }], rating: 4 }
+  log: {                                                // the Planner page
+    "2026-11-22": {
+      gsoc: [{ id, org, tech: [], issue, issueLink, repo, did, learned }]
+    }
   },
-  weekFocus: { "2026-10-26": "Get OSS-CRS running" },   // key = Monday of that week
+  days: {},        // from the old weekly planner, kept so old data still counts on Progress
+  weekFocus: {},   // from the old weekly planner
   programs: {
     esoc: {
       orgs:       [{ id, name, project, stack: [], repo, status, desc }],
