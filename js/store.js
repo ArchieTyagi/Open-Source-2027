@@ -9,6 +9,8 @@
      programs:      { gsoc: { orgs, daily, milestones, journal, proposals, timeline }, ... },
      contributions: [{ id, date, what, project, type, status }],
      log:           { "2026-11-22": { gsoc: [{ id, org, tech, issue, issueLink, repo, prs: [{ link, status }], did, learned }] } }
+     prs:           [{ id, program: "gsoc", org, title, link, status: "review" | "merged" | "closed", opened, updated }]
+                    the "My PRs" list on each program page
      todos:         { "2026-11-23": [{ id, text, tag: "gsoc", done }] }   Today's tasks on the Planner
      focus:         { days: { "2026-11-22": { gsoc: 3600 } },   seconds of focus time per program
                       running: { program: "gsoc", since: 1795000000000 } or null }   the timer that is ticking now
@@ -19,7 +21,7 @@
   const STORAGE_KEY = 'open-source-2027';
 
   function emptyData() {
-    return { version: 1, days: {}, weekFocus: {}, programs: {}, contributions: [], log: {}, focus: { days: {}, running: null }, todos: {} };
+    return { version: 1, days: {}, weekFocus: {}, programs: {}, contributions: [], log: {}, focus: { days: {}, running: null }, todos: {}, prs: [] };
   }
 
   function load() {
@@ -180,40 +182,54 @@
   // the newest day's status wins (so "In review" today and "Merged" tomorrow = Merged).
   App.PR_STATUS = {
     review: 'In review',
-    merged: 'Merged'
+    merged: 'Merged',
+    closed: 'Closed'
   };
+  App.prKey = function (link) { return App.shortUrl(link).toLowerCase().replace(/\/+$/, ''); };
+
+  // ---------- My PRs (the PR list on each program page) ----------
+  App.getPRs = function () {
+    if (!Array.isArray(App.data.prs)) App.data.prs = [];
+    return App.data.prs;
+  };
+
+  // Every PR from two places: the "My PRs" lists and PR links inside daily work entries.
+  // A PR is known by its link: if it is in both places or on several days, the newest update wins.
   App.prSummary = function () {
     const prs = {};
-    let activeDays = 0;
+    const days = {};
+    function put(key, pr) {
+      const old = prs[key];
+      if (old && old.lastDay > pr.lastDay) return;
+      if (old) { pr.firstDay = old.firstDay < pr.firstDay ? old.firstDay : pr.firstDay; pr.title = pr.title || old.title; }
+      prs[key] = pr;
+    }
     Object.keys(App.data.log || {}).sort().forEach(function (dayKey) {
-      let any = false;
       App.PROGRAM_ORDER.forEach(function (programId) {
         App.getLog(dayKey, programId).forEach(function (e) {
-          any = true;
+          days[dayKey] = true;
           App.entryPRs(e).forEach(function (pr) {
             if (!App.PR_STATUS[pr.status]) return;
-            const key = App.shortUrl(pr.link).toLowerCase().replace(/\/+$/, '');
-            const old = prs[key];
-            prs[key] = {
-              link: pr.link,
-              program: programId,
-              org: e.org,
-              title: e.issue || (old && old.title) || '',
-              status: pr.status,
-              firstDay: old ? old.firstDay : dayKey,
-              lastDay: dayKey
-            };
+            put(App.prKey(pr.link), { link: pr.link, program: programId, org: e.org, title: e.issue || '',
+              status: pr.status, firstDay: dayKey, lastDay: dayKey });
           });
         });
       });
-      if (any) activeDays++;
+    });
+    App.getPRs().forEach(function (p) {
+      if (p.opened) days[p.opened] = true;
+      if (p.updated) days[p.updated] = true;
+      put(App.prKey(p.link), { link: p.link, program: p.program, org: p.org, title: p.title || '',
+        status: p.status, firstDay: p.opened || p.updated, lastDay: p.updated || p.opened });
     });
     const list = Object.keys(prs).map(function (k) { return prs[k]; });
+    function count(st) { return list.filter(function (p) { return p.status === st; }).length; }
     return {
-      activeDays: activeDays,
+      activeDays: Object.keys(days).length,
       prs: list,
-      merged: list.filter(function (p) { return p.status === 'merged'; }).length,
-      review: list.filter(function (p) { return p.status === 'review'; }).length
+      merged: count('merged'),
+      review: count('review'),
+      closed: count('closed')
     };
   };
 
