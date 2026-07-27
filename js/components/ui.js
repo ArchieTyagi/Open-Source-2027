@@ -169,7 +169,7 @@
         '<span class="os-stat__note">' + note + '</span></div>';
     }
     return '<div class="os-grid-3 os-stats3">' +
-      tile('Active days', s.activeDays, 'Days with at least one Planner entry') +
+      tile('Active days', s.activeDays, 'Days you logged work or a PR') +
       tile('Merged PRs', s.merged, 'PR status set to Merged') +
       tile('PRs in review', s.review, 'PR status set to Open / in review') +
       '</div>';

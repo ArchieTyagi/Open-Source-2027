@@ -196,6 +196,7 @@ a { color: inherit; }
 .os-pill--open { --c: var(--muted); }
 .os-pill--review { --c: var(--star); }
 .os-pill--merged { --c: var(--success); }
+.os-pill--closed { --c: var(--muted); }
 .os-chip { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 999px; font: 600 13px/1 var(--font-body); white-space: nowrap; color: var(--prog); background: color-mix(in srgb, var(--prog) 13%, transparent); border: 1px solid color-mix(in srgb, var(--prog) 35%, transparent); }
 .os-chip .os-ic { width: 15px; height: 15px; }
 .os-chip .os-mono { font-weight: 500; font-size: 12px; }
@@ -589,3 +590,20 @@ a { color: inherit; }
   .os-taskform .os-btn { justify-content: center; }
   .os-tasks__prog { align-items: flex-start; }
 }
+
+/* ---------- My PRs on program pages ---------- */
+.os-prtable { margin-top: 10px; }
+.os-prtable td { vertical-align: middle; }
+.os-prtitle { display: block; font-size: 14px; line-height: 20px; font-weight: 500; margin-bottom: 2px; overflow-wrap: anywhere; }
+.os-prtable__act { white-space: nowrap; text-align: right; }
+.os-prstatus { min-width: 118px; font-weight: 600; }
+.os-prstatus--review { color: var(--star); }
+.os-prstatus--merged { color: var(--success); }
+.os-prstatus--closed { color: var(--muted); }
+.os-prorg + .os-prorg { margin-top: 0; }
+.os-prtable { table-layout: fixed; min-width: 640px; }
+.os-prtable th:nth-child(1) { width: 40px; }
+.os-prtable th:nth-child(3) { width: 150px; }
+.os-prtable th:nth-child(4), .os-prtable th:nth-child(5) { width: 112px; }
+.os-prtable th:nth-child(6) { width: 84px; }
+.os-prtable .os-entry-link { max-width: 100%; }
