@@ -1,7 +1,6 @@
 # Open Source 2027
 
-A personal planner for applying to open source programs in 2027: GSoC, ESoC, LFX Mentorship, Summer of Bitcoin,
-Outreachy, FOSSEE Summer Fellowship (IIT Bombay) and FOSS Overflow (IIT Bhilai).
+A personal planner for applying to open source programs in 2027: GSoC, ESoC, LFX Mentorship and Summer of Bitcoin.
 Plain HTML, CSS and JavaScript. No framework, no install, no server.
 
 ## Run it
@@ -25,11 +24,7 @@ open-source-2027/
 ├── gsoc.html             ┐
 ├── esoc.html             │
 ├── lfx.html              │ Program pages. They all use the SAME template:
-├── sob.html              │ js/pages/program.js
-├── outreachy.html        │
-├── fossee.html           │ FOSSEE Summer Fellowship, IIT Bombay
-├── fossoverflow.html     ┘ FOSS Overflow, IIT Bhilai
-├── deadlines.html        Every date from all programs in one list
+├── sob.html              ┘ js/pages/program.js
 ├── progress.html         Streak, active days, tasks done, merged PRs, heatmap
 ├── contributions.html    Log of PRs, issues and docs fixes
 │
@@ -49,7 +44,6 @@ open-source-2027/
     └── pages/
         ├── planner.js
         ├── program.js    One template for every program page
-        ├── deadlines.js
         ├── progress.js
         └── contributions.js
 ```
@@ -134,9 +128,6 @@ Sources for the 2026 dates:
 - LFX Mentorship: https://docs.linuxfoundation.org/lfx/mentorship/mentorship-program-timelines
 - Summer of Bitcoin: https://blog.summerofbitcoin.org
 - ESoC posts projects on a rolling basis: https://www.esoc.dev
-- Outreachy (May 2026 cohort): https://www.outreachy.org/blog/2026-02-06/may-2026-initial-applications-open/
-- FOSSEE Summer Fellowship (IIT Bombay): https://fossee.in
-- FOSS Overflow (IIT Bhilai): dates not posted online yet, check https://fossoverflow.openlake.in
 
 ## Good order to read the code
 
