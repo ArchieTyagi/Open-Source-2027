@@ -100,7 +100,8 @@
   const STATUS_OPTIONS = [
     { value: '', label: 'No status yet' },
     { value: 'review', label: 'Open / in review' },
-    { value: 'merged', label: 'Merged' }
+    { value: 'merged', label: 'Merged' },
+    { value: 'closed', label: 'Closed' }
   ];
   function prRowHTML(p) {
     return '<div class="os-prrow" data-pr-row>' +
