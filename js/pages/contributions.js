@@ -1,6 +1,6 @@
 /* contributions.js
-   Every PR from your Planner entries, newest first, with its status.
-   Nothing is added here by hand: add a PR link and status to a Planner entry
+   Every PR from My PRs (program pages) and work entries, newest first, with its status.
+   Nothing is added here by hand: add PRs under My PRs on a program page
    and it shows up here (and on the Progress page) by itself. */
 
 (function (App) {
@@ -9,7 +9,7 @@
   function tableHTML(prs) {
     if (!prs.length) {
       return '<div class="os-card__body">' + App.emptyHTML('branch', 'No PRs yet',
-        'On the Planner, add an entry with a PR link and set PR status to Open / in review or Merged. It shows up here by itself.') + '</div>';
+        'Add your PRs under My PRs on a program page (GSoC, ESoC, LFX, SoB). They show up here automatically.') + '</div>';
     }
     const body = prs.map(function (p) {
       const info = App.PROGRAMS[p.program];
@@ -27,9 +27,9 @@
     const s = App.prSummary();
     const prs = s.prs.sort(function (a, b) { return a.lastDay < b.lastDay ? 1 : a.lastDay > b.lastDay ? -1 : 0; });
     App.mount(document.getElementById('app'),
-      '<div class="os-phead"><div><p class="os-label">Added from your Planner automatically</p><h1 class="os-h1">Contributions</h1></div></div>' +
+      '<div class="os-phead"><div><p class="os-label">Added from your program pages automatically</p><h1 class="os-h1">Contributions</h1></div></div>' +
       App.statTilesHTML(s) +
-      '<section class="os-card os-section">' + App.cardHead('All PRs', '<span class="os-card__meta">Newest first &middot; to change a status, edit the entry on the Planner</span>') +
+      '<section class="os-card os-section">' + App.cardHead('All PRs', '<span class="os-card__meta">Newest first &middot; to change a status, use My PRs on the program page</span>') +
       tableHTML(prs) + '</section>');
   };
 })(window.App);
