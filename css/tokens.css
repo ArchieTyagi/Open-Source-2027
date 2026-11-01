@@ -1,0 +1,64 @@
+/* tokens.css
+   Design tokens = named values for every colour, font, size and corner.
+   Change a value here and the whole site follows. */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces, back to front */
+  --bg: #1c1719;          /* page background */
+  --card: #241e22;        /* cards and modals */
+  --card-head: #352a31;   /* card header bars */
+  --line: #3a2f35;        /* borders */
+  --track: #54434c;       /* the "not done yet" part of bars and rings */
+
+  /* Text */
+  --ink: #f4ebef;         /* main text */
+  --muted: #a6959d;       /* secondary text */
+
+  /* Actions and states */
+  --accent: #dd91a6;      /* pink: buttons, progress, highlights */
+  --accent-ink: #1c1719;  /* text on top of pink */
+  --star: #f2c14e;        /* filled stars */
+  --star-off: #7d6973;    /* empty stars */
+  --success: #7fcf9a;     /* Selected, Accepted, Merged */
+  --danger: #f07a7a;      /* under 14 days, delete */
+  --scrim: rgba(12, 9, 11, 0.66); /* dark layer behind a modal */
+
+  /* One colour per program */
+  --gsoc: #88aaf0;
+  --esoc: #5dcbb8;
+  --lfx: #aca1f2;
+  --sob: #e9aa55;
+
+  /* Heatmap shades, from nothing done to 4+ things done */
+  --heat-0: #2c2429;
+  --heat-1: #4f3842;
+  --heat-2: #7d5264;
+  --heat-3: #ad7088;
+  --heat-4: #dd91a6;
+
+  /* Shadows */
+  --shadow-glow: 0 0 0 4px rgba(221, 145, 166, 0.22);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.55);
+
+  /* Fonts */
+  --font-display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 28px;
+  --space-7: 48px;
+
+  /* Corners */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+}
