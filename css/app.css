@@ -79,3 +79,7 @@ button.os-step:focus-visible { outline: 2px solid var(--accent); outline-offset:
 
 /* text only screen readers hear (screen reader = software that reads the page aloud) */
 .os-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Daily learning: edit and delete buttons, and the edit box */
+.os-entry__actions { display: flex; gap: 2px; flex: none; }
+.os-entry.is-editing .os-textarea { margin-top: 6px; min-height: 72px; }

@@ -1,6 +1,7 @@
 /* programs.js
-   The four programs: names, colours, links, starting milestones and starting dates.
-   The program pages (gsoc.html, esoc.html, lfx.html, sob.html) all use ONE template
+   The programs: names, colours, links, starting milestones and starting dates.
+   Every program page (gsoc.html, esoc.html, lfx.html, sob.html, outreachy.html,
+   fossee.html, fossoverflow.html) uses ONE template
    (js/pages/program.js). It reads its program from this list.
 
    Dates for 2027 are not announced yet. Every starting date below is labelled:
@@ -9,7 +10,7 @@
    Change a label to "official" once you check the real 2027 date. */
 
 (function (App) {
-  App.PROGRAM_ORDER = ['gsoc', 'esoc', 'lfx', 'sob'];
+  App.PROGRAM_ORDER = ['gsoc', 'esoc', 'lfx', 'sob', 'outreachy', 'fossee', 'fossoverflow'];
 
   App.PROGRAMS = {
     gsoc: {
@@ -118,6 +119,81 @@
         { date: '2027-04', title: 'Proposal round', tag: 'expected', note: 'Month is a guess' },
         { date: '2027-05', title: 'Project starts', tag: 'expected', note: '2026: 18.05.2026' },
         { date: '2027-08', title: 'Project ends', tag: 'expected', note: '2026: 16.08.2026' }
+      ]
+    },
+    outreachy: {
+      id: 'outreachy',
+      short: 'Outreachy',
+      title: 'Outreachy 2027',
+      name: 'Outreachy (May cohort)',
+      page: 'outreachy.html',
+      site: 'https://www.outreachy.org',
+      milestones: [
+        'Read the eligibility rules',
+        'Submit the initial application',
+        'Initial application approved',
+        'Pick a project from the project list',
+        'Make my first contribution',
+        'Record each contribution on the Outreachy site',
+        'Write the final application',
+        'Submit before the final deadline'
+      ],
+      timeline: [
+        { date: '2026-11', title: 'Read the eligibility rules', tag: 'proposed', note: 'There is also a December cohort, mainly for southern hemisphere students.' },
+        { date: '2027-02', title: 'Initial applications open', tag: 'expected', note: '2026: open 06.02.2026, closed 13.02.2026' },
+        { date: '2027-03', title: 'Initial results and contribution period starts', tag: 'expected', note: '2026: 20.03.2026' },
+        { date: '2027-04', title: 'Final application deadline', tag: 'expected', note: '2026: 15.04.2026' },
+        { date: '2027-05', title: 'Accepted interns announced', tag: 'expected', note: '2026: 01.05.2026' },
+        { date: '2027-05', title: 'Internship starts', tag: 'expected', note: '2026: 18.05.2026 to 17.08.2026' }
+      ]
+    },
+
+    fossee: {
+      id: 'fossee',
+      short: 'IIT Bombay',
+      title: 'FOSSEE 2027',
+      name: 'FOSSEE Summer Fellowship (IIT Bombay)',
+      page: 'fossee.html',
+      site: 'https://fossee.in',
+      milestones: [
+        'Browse the FOSSEE projects',
+        'Pick a project',
+        'Learn the tool the project uses',
+        'Do the screening task',
+        'Submit the application',
+        'Check the results',
+        'Choose remote or on-campus',
+        'Finish the fellowship'
+      ],
+      timeline: [
+        { date: '2026-11', title: 'Learn the tools for my chosen project', tag: 'proposed', note: '' },
+        { date: '2027-03', title: 'Applications open', tag: 'expected', note: '2026: 27.03.2026' },
+        { date: '2027-04', title: 'Applications and screening task close', tag: 'expected', note: '2026: 13.04.2026' },
+        { date: '2027-04', title: 'Results announced', tag: 'expected', note: '2026: 20.04.2026' },
+        { date: '2027-05', title: 'Fellowship starts', tag: 'expected', note: '2026: 15.05.2026 to 15.07.2026, remote or on-campus, no stipend' }
+      ]
+    },
+
+    fossoverflow: {
+      id: 'fossoverflow',
+      short: 'IIT Bhilai',
+      title: 'FOSS Overflow 2027',
+      name: 'FOSS Overflow (OpenLake, IIT Bhilai)',
+      page: 'fossoverflow.html',
+      site: 'https://fossoverflow.openlake.in',
+      milestones: [
+        'Join the OpenLake Discord',
+        'Check the rules (18+, Git and GitHub basics)',
+        'Register',
+        'Pick a project',
+        'Set up locally',
+        'First PR merged',
+        'Keep 30 hours a week free for the 4 week coding period',
+        'Finish the coding period'
+      ],
+      timeline: [
+        { date: '2026-11', title: 'Learn Git and GitHub basics', tag: 'proposed', note: '' },
+        { date: '2027-01', title: 'Next edition', tag: 'expected', note: 'Dates not announced. Check fossoverflow.openlake.in or the Discord.' }
       ]
     }
   };

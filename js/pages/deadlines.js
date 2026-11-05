@@ -1,5 +1,5 @@
 /* deadlines.js
-   Every date from all four programs in one list, soonest first.
+   Every date from all programs in one list, soonest first.
    Proposal deadlines are included too (until the result is in). */
 
 (function (App) {

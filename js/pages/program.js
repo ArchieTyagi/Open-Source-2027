@@ -1,5 +1,6 @@
 /* program.js
-   ONE template for all four program pages: GSoC, ESoC, LFX and Summer of Bitcoin.
+   ONE template for every program page: GSoC, ESoC, LFX, Summer of Bitcoin,
+   Outreachy, FOSSEE (IIT Bombay) and FOSS Overflow (IIT Bhilai).
    The HTML page says which program it is with <body data-program="gsoc">.
    Sections, top to bottom (same order on a phone):
    Organizations, Daily progress, Total progress, Daily learning, Proposals, Timeline. */
@@ -9,6 +10,7 @@
   const id = document.body.dataset.program;
   const info = App.PROGRAMS[id];
   const expandedOrgs = {}; // which org rows are open (only while the page is open)
+  let editingEntry = null; // id of the Daily learning entry being edited, or null
 
   const ORG_STATUS = [
     { value: 'exploring', label: 'Exploring', color: 'muted' },
@@ -151,9 +153,22 @@
   // ---------- daily learning ----------
   function journalHTML(p) {
     const entries = p.journal.map(function (j) {
-      return '<li class="os-entry"><div class="os-entry__body"><div class="os-entry__date">' + App.formatDate(j.date) + '</div>' +
+      const date = '<div class="os-entry__date">' + App.formatDate(j.date) + (j.edited ? ' &middot; edited' : '') + '</div>';
+      if (editingEntry === j.id) {
+        // Edit mode: the text turns into a box with Save and Cancel
+        return '<li class="os-entry is-editing"><div class="os-entry__body">' + date +
+          '<textarea class="os-textarea" rows="3" maxlength="1000" data-edit-entry="' + j.id + '" aria-label="Edit entry">' + esc(j.text) + '</textarea>' +
+          '<div class="os-row" style="justify-content:flex-end;gap:8px;margin-top:8px">' +
+          '<button type="button" class="os-btn os-btn--ghost os-btn--sm" data-action="journal-cancel">Cancel</button>' +
+          '<button type="button" class="os-btn os-btn--primary os-btn--sm" data-action="journal-save" data-id="' + j.id + '">Save</button>' +
+          '</div></div></li>';
+      }
+      return '<li class="os-entry"><div class="os-entry__body">' + date +
         '<p class="os-entry__text">' + esc(j.text) + '</p></div>' +
-        '<button type="button" class="os-iconbtn os-iconbtn--danger" data-action="journal-delete" data-id="' + j.id + '" aria-label="Delete entry">' + App.icon('trash') + '</button></li>';
+        '<div class="os-entry__actions">' +
+        '<button type="button" class="os-iconbtn" data-action="journal-edit" data-id="' + j.id + '" aria-label="Edit entry">' + App.icon('edit') + '</button>' +
+        '<button type="button" class="os-iconbtn os-iconbtn--danger" data-action="journal-delete" data-id="' + j.id + '" aria-label="Delete entry">' + App.icon('trash') + '</button>' +
+        '</div></li>';
     }).join('');
     return '<section class="os-card" aria-label="Daily learning">' +
       App.cardHead('Daily learning', '<span class="os-card__meta">' + p.journal.length + (p.journal.length === 1 ? ' entry' : ' entries') + '</span>') +
@@ -271,6 +286,18 @@
     if (i > -1) list.splice(i, 1);
   }
 
+  function saveEntry(entryId) {
+    const p = App.getProgram(id);
+    const entry = byId(p.journal, entryId);
+    const box = document.querySelector('[data-edit-entry="' + entryId + '"]');
+    if (!entry || !box) return;
+    const text = box.value.trim();
+    if (!text) { box.focus(); return; } // empty: use Delete instead
+    if (text !== entry.text) { entry.text = text; entry.edited = true; }
+    editingEntry = null;
+    App.commit();
+  }
+
   document.addEventListener('click', function (e) {
     const el = e.target.closest('[data-action]');
     if (!el) return;
@@ -301,7 +328,20 @@
         App.commit('journal-' + id);
         break;
       }
-      case 'journal-delete': removeById(p.journal, itemId); App.commit(); break;
+      case 'journal-delete':
+        if (editingEntry === itemId) editingEntry = null;
+        removeById(p.journal, itemId);
+        App.commit();
+        break;
+      case 'journal-edit': {
+        editingEntry = itemId;
+        App.render();
+        const box = document.querySelector('[data-edit-entry="' + itemId + '"]');
+        if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+        break;
+      }
+      case 'journal-cancel': editingEntry = null; App.render(); break;
+      case 'journal-save': saveEntry(itemId); break;
 
       case 'prop-add': openProposalModal(); break;
       case 'prop-edit': openProposalModal(byId(p.proposals, itemId)); break;
@@ -326,6 +366,13 @@
 
   // Enter or Space on a focused org row opens it, like a click.
   document.addEventListener('keydown', function (e) {
+    // While editing an entry: Ctrl/Cmd + Enter saves, Escape cancels.
+    const editBox = e.target.closest && e.target.closest('[data-edit-entry]');
+    if (editBox) {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveEntry(editBox.dataset.editEntry); }
+      if (e.key === 'Escape') { editingEntry = null; App.render(); }
+      return;
+    }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('os-org')) {
       e.preventDefault();
       e.target.click();

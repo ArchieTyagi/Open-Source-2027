@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FOSSEE Summer Fellowship 2027 planning">
+  <meta name="theme-color" content="#1c1719">
+  <title>FOSSEE 2027 · Open Source 2027</title>
+
+  <!-- Fonts: Bricolage Grotesque (headings), Figtree (text), JetBrains Mono (dates and numbers) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+
+  <!-- Styles: tokens first, then components, then app extras -->
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body data-page="fossee" data-program="fossee">
+  <div class="os-app">
+    <div id="app-header"></div>
+    <main class="os-main" id="app">
+      <noscript>This app needs JavaScript turned on.</noscript>
+    </main>
+    <footer id="app-footer"></footer>
+  </div>
+
+  <!-- Shared code (order matters: each file uses the ones above it) -->
+  <script src="js/utils.js"></script>
+  <script src="js/programs.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/components/ui.js"></script>
+  <script src="js/components/modal.js"></script>
+  <script src="js/components/layout.js"></script>
+
+  <!-- This page -->
+  <script src="js/pages/program.js"></script>
+</body>
+</html>

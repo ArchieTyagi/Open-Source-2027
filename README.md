@@ -1,6 +1,7 @@
 # Open Source 2027
 
-A personal planner for applying to GSoC, ESoC, LFX Mentorship and Summer of Bitcoin in 2027.
+A personal planner for applying to open source programs in 2027: GSoC, ESoC, LFX Mentorship, Summer of Bitcoin,
+Outreachy, FOSSEE Summer Fellowship (IIT Bombay) and FOSS Overflow (IIT Bhilai).
 Plain HTML, CSS and JavaScript. No framework, no install, no server.
 
 ## Run it
@@ -22,9 +23,12 @@ Your data is saved in the browser's localStorage (a small storage space inside t
 open-source-2027/
 ├── index.html            Planner (weekly to-dos, progress, focus)
 ├── gsoc.html             ┐
-├── esoc.html             │ Program pages. All four use the SAME template:
-├── lfx.html              │ js/pages/program.js
-├── sob.html              ┘
+├── esoc.html             │
+├── lfx.html              │ Program pages. They all use the SAME template:
+├── sob.html              │ js/pages/program.js
+├── outreachy.html        │
+├── fossee.html           │ FOSSEE Summer Fellowship, IIT Bombay
+├── fossoverflow.html     ┘ FOSS Overflow, IIT Bhilai
 ├── deadlines.html        Every date from all programs in one list
 ├── progress.html         Streak, active days, tasks done, merged PRs, heatmap
 ├── contributions.html    Log of PRs, issues and docs fixes
@@ -36,7 +40,7 @@ open-source-2027/
 │
 └── js/
     ├── utils.js          Helpers: icons, safe text, ids, dates
-    ├── programs.js       The 4 programs: names, links, starting milestones and dates
+    ├── programs.js       The programs: names, links, starting milestones and dates
     ├── store.js          All your data, and saving it to localStorage
     ├── components/
     │   ├── ui.js         Shared HTML pieces: checklist, stars, rings, pills, empty states
@@ -44,7 +48,7 @@ open-source-2027/
     │   └── layout.js     Top bar, tabs and footer on every page
     └── pages/
         ├── planner.js
-        ├── program.js    One template for GSoC, ESoC, LFX and Summer of Bitcoin
+        ├── program.js    One template for every program page
         ├── deadlines.js
         ├── progress.js
         └── contributions.js
@@ -68,7 +72,7 @@ Every HTML page is the same empty shell. Only two things change:
 
 That is the whole idea: **data → render → click → change data → save → render again.**
 
-## How the 4 program pages share one template
+## How the program pages share one template
 
 `program.js` reads `data-program` from the `<body>` tag, then looks up that program in `programs.js`:
 
@@ -79,10 +83,10 @@ const info = App.PROGRAMS[id];               // name, title, link, milestones, d
 
 The program colour comes from CSS. `layout.js` sets `--prog: var(--esoc)` on the page, and every place that uses `var(--prog)` (title, chips, timeline, org avatars) turns teal.
 
-**To add a 5th program** (say Outreachy):
-1. Add a colour in `css/tokens.css`, like `--outreachy: #...;`
+**To add another program** (say Hacktoberfest):
+1. Add a colour in `css/tokens.css`, like `--hacktoberfest: #...;`
 2. Add an entry in `js/programs.js` and put its id in `App.PROGRAM_ORDER`.
-3. Copy `esoc.html` to `outreachy.html` and change `data-page` and `data-program`.
+3. Copy `esoc.html` to `hacktoberfest.html` and change `data-page` and `data-program`.
 4. Add a tab in `js/components/layout.js`.
 
 ## What the data looks like
@@ -100,7 +104,7 @@ Everything lives in one object, `App.data`:
       orgs:       [{ id, name, project, stack: [], repo, status, desc }],
       daily:      { "2026-11-01": [{ id, text, done }] },
       milestones: [{ id, text, done }],
-      journal:    [{ id, date, text }],
+      journal:    [{ id, date, text, edited }],
       proposals:  [{ id, title, org, status, deadline, link, outline }],
       timeline:   [{ id, date, title, tag, note }]
     }
@@ -130,6 +134,9 @@ Sources for the 2026 dates:
 - LFX Mentorship: https://docs.linuxfoundation.org/lfx/mentorship/mentorship-program-timelines
 - Summer of Bitcoin: https://blog.summerofbitcoin.org
 - ESoC posts projects on a rolling basis: https://www.esoc.dev
+- Outreachy (May 2026 cohort): https://www.outreachy.org/blog/2026-02-06/may-2026-initial-applications-open/
+- FOSSEE Summer Fellowship (IIT Bombay): https://fossee.in
+- FOSS Overflow (IIT Bhilai): dates not posted online yet, check https://fossoverflow.openlake.in
 
 ## Good order to read the code
 

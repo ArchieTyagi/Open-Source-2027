@@ -9,6 +9,9 @@
     { page: 'esoc', label: 'ESoC', href: 'esoc.html', program: 'esoc' },
     { page: 'lfx', label: 'LFX', href: 'lfx.html', program: 'lfx' },
     { page: 'sob', label: 'Summer of Bitcoin', href: 'sob.html', program: 'sob' },
+    { page: 'outreachy', label: 'Outreachy', href: 'outreachy.html', program: 'outreachy' },
+    { page: 'fossee', label: 'IIT Bombay', href: 'fossee.html', program: 'fossee' },
+    { page: 'fossoverflow', label: 'IIT Bhilai', href: 'fossoverflow.html', program: 'fossoverflow' },
     { page: 'deadlines', label: 'Deadlines', href: 'deadlines.html' },
     { page: 'progress', label: 'Progress', href: 'progress.html' },
     { page: 'contributions', label: 'Contributions', href: 'contributions.html' }
